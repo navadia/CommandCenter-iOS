@@ -54,7 +54,8 @@ struct TodayView: View {
     // MARK: - List
 
     private var list: some View {
-        List(selection: $selection) {
+        // Rows are only selectable in Select mode; otherwise a tap opens the email.
+        List(selection: editMode.isEditing ? $selection : .constant(Set<String>())) {
             ForEach(board.power) { item in
                 PowerCard(item: item)
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
@@ -65,6 +66,11 @@ struct TodayView: View {
                     ForEach(group.items) { item in
                         ItemRow(item: item, lane: group.lane)
                             .tag(item.id)
+                            .contentShape(.rect)
+                            .simultaneousGesture(TapGesture().onEnded {
+                                guard !editMode.isEditing, let url = item.emailURL else { return }
+                                openURL(url)
+                            })
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button("Done", systemImage: "checkmark") {
                                     Task { await store.markDone([item.id]) }
