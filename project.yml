@@ -1,0 +1,63 @@
+# XcodeGen spec: the cloud Mac turns this into CommandCenter.xcodeproj.
+# No Xcode project file is kept in git, so it can be edited from anywhere.
+name: CommandCenter
+options:
+  bundleIdPrefix: com.navadia
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.1"
+    CURRENT_PROJECT_VERSION: "1"
+    TARGETED_DEVICE_FAMILY: "1"
+    CODE_SIGNING_ALLOWED: "NO"       # SideStore signs it with your Apple ID
+    CODE_SIGNING_REQUIRED: "NO"
+    CODE_SIGN_IDENTITY: ""
+    ENABLE_USER_SCRIPT_SANDBOXING: "YES"
+targets:
+  CommandCenter:
+    type: application
+    platform: iOS
+    sources:
+      - App
+      - Shared
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Command Center
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        ALTAppGroups: [group.com.navadia.commandcenter]
+    entitlements:
+      path: App/CommandCenter.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.navadia.commandcenter]
+    dependencies:
+      - target: CommandCenterWidget
+        embed: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.navadia.commandcenter
+        ASSETCATALOG_COMPILER_APPICON_NAME: ""
+  CommandCenterWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Widget
+      - Shared
+    info:
+      path: Widget/Info.plist
+      properties:
+        CFBundleDisplayName: Command Center
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        ALTAppGroups: [group.com.navadia.commandcenter]
+    entitlements:
+      path: Widget/CommandCenterWidget.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.navadia.commandcenter]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.navadia.commandcenter.widget

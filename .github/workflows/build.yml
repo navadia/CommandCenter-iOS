@@ -1,0 +1,80 @@
+name: Build iOS app
+
+# Every push to main builds an unsigned .ipa on a GitHub-hosted Mac and
+# publishes it as the "latest" release, so the phone can always download
+#   https://github.com/navadia/CommandCenter-iOS/releases/latest/download/CommandCenter.ipa
+# SideStore signs it with your Apple ID when you install it.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use the newest Xcode on the runner
+        run: |
+          XCODE=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
+          xcodebuild -showsdks | grep -i iphoneos
+
+      - name: Install tools
+        run: brew install xcodegen ldid
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project CommandCenter.xcodeproj \
+            -scheme CommandCenter \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            | tee build.log | grep -E "error:|warning: .*deprecated|BUILD (SUCCEEDED|FAILED)" || true
+          test -d build/Build/Products/Release-iphoneos/CommandCenter.app
+
+      - name: Embed entitlements and package .ipa
+        run: |
+          set -o pipefail
+          scripts/package.sh 2>&1 | tee -a build.log
+
+      - name: Publish the error log on failure (readable without Actions access)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          touch build.log
+          grep -nE "error:|fatal|Undefined symbol" build.log | head -80 > errors.txt || true
+          tail -60 build.log >> errors.txt
+          gh release delete build-failed --yes --cleanup-tag || true
+          gh release create build-failed errors.txt build.log --prerelease \
+            --title "Build failed ($(git rev-parse --short HEAD))" --notes-file errors.txt
+
+      - name: Publish as latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete build-failed --yes --cleanup-tag || true
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest CommandCenter.ipa \
+            --title "Latest build ($(git rev-parse --short HEAD))" \
+            --notes "Built from $(git rev-parse --short HEAD). Open this page on your iPhone, download CommandCenter.ipa, then Share -> SideStore." \
+            --latest
