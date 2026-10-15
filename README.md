@@ -17,7 +17,13 @@ Notion token is entered in the app and kept in the iPhone Keychain.
 
 ## Status
 
-Step 1 — pipeline test: a glass test screen plus a small widget with a button.
-It checks that the build installs, that the app and widget share data through
-an App Group under SideStore, and that widget buttons work without opening
-the app.
+Step 2 — the real app.
+
+- **App:** Today list grouped like the Briefing (Money, Trials, Ventures,
+  Travel, To-Do), power card, swipe right to complete, swipe left to open the
+  email in Gmail, Select for marking several done, pull to refresh.
+- **Widget:** small, medium and large. Each row has a circle button that marks
+  the item done in Notion without opening the app. Falls back to the last
+  list when offline.
+- **Settings:** paste the Notion token once; it's stored in the Keychain and
+  shared with the widget.
