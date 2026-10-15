@@ -171,7 +171,7 @@ struct CommandCenterWidgetView: View {
 
     /// Large: every section gets its top item first, leftovers go to the most urgent.
     private func fit(maxRows: Int) -> [LaneGroup] {
-        let budget = maxRows - min(board.lanes.count, 4) / 2    // headers take space too
+        let budget = board.lanes.count >= 5 ? maxRows - 1 : maxRows   // a 5th header costs a row
         var counts = board.lanes.map { _ in 0 }
         var used = 0
         for i in board.lanes.indices where used < budget { counts[i] = 1; used += 1 }
