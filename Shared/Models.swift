@@ -48,12 +48,19 @@ struct Item: Identifiable, Codable, Hashable, Sendable {
     var emailURL: URL? {
         guard let link else { return nil }
         if let range = link.range(of: "rfc822msgid:") {
-            let id = String(link[range.upperBound...])
-            let query = "rfc822msgid:\(id)".addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? ""
+            // The stored link may already be percent-encoded; normalize, then
+            // encode like JavaScript's encodeURIComponent (what Gmail accepts).
+            let raw = String(link[range.upperBound...])
+            let id = raw.removingPercentEncoding ?? raw
+            let query = "rfc822msgid:\(id)".addingPercentEncoding(withAllowedCharacters: Item.uriComponentAllowed) ?? ""
             return URL(string: "googlegmail:///search/\(query)")
         }
         return URL(string: link)
     }
+
+    /// Same characters JavaScript's encodeURIComponent leaves alone.
+    static let uriComponentAllowed = CharacterSet(
+        charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.!~*'()")
 
     nonisolated(unsafe) static let dayFormatter: DateFormatter = {
         let f = DateFormatter()
