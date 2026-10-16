@@ -31,6 +31,11 @@ jobs:
           xcodebuild -version
           xcodebuild -showsdks | grep -i iphoneos
 
+      - name: Test the email parser
+        run: |
+          swiftc App/Mail/EmailMessage.swift Tests/MailCheck/main.swift -o mailcheck
+          ./mailcheck
+
       - name: Install tools
         run: brew install xcodegen ldid
 

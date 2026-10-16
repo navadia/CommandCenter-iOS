@@ -10,6 +10,7 @@ final class ItemStore {
     private(set) var isLoading = false
     var errorMessage: String?
     var hasToken = TokenStore.load() != nil
+    var hasGmail = GmailCredentials.load() != nil
 
     var board: Board { Board(items) }
 

@@ -44,23 +44,15 @@ struct Item: Identifiable, Codable, Hashable, Sendable {
         amount.map { $0.formatted(.currency(code: "USD").precision(.fractionLength(0))) }
     }
 
-    /// Gmail app deep link from the stored web search link.
-    var emailURL: URL? {
-        guard let link else { return nil }
-        if let range = link.range(of: "rfc822msgid:") {
-            // The stored link may already be percent-encoded; normalize, then
-            // encode like JavaScript's encodeURIComponent (what Gmail accepts).
-            let raw = String(link[range.upperBound...])
-            let id = raw.removingPercentEncoding ?? raw
-            let query = "rfc822msgid:\(id)".addingPercentEncoding(withAllowedCharacters: Item.uriComponentAllowed) ?? ""
-            return URL(string: "googlegmail:///search/\(query)")
-        }
-        return URL(string: link)
+    /// The email's Message-ID, taken from the stored Gmail search link
+    /// (".../#search/rfc822msgid:<id>"). The app uses it to fetch the email
+    /// from the hub over IMAP, since the Gmail app can't open one message by link.
+    var messageID: String? {
+        guard let link, let range = link.range(of: "rfc822msgid:") else { return nil }
+        let raw = String(link[range.upperBound...])
+        let id = (raw.removingPercentEncoding ?? raw).trimmingCharacters(in: CharacterSet(charactersIn: "<> "))
+        return id.isEmpty ? nil : id
     }
-
-    /// Same characters JavaScript's encodeURIComponent leaves alone.
-    static let uriComponentAllowed = CharacterSet(
-        charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.!~*'()")
 
     nonisolated(unsafe) static let dayFormatter: DateFormatter = {
         let f = DateFormatter()
