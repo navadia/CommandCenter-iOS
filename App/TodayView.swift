@@ -4,11 +4,11 @@ import SwiftUI
 struct TodayView: View {
     @Environment(ItemStore.self) private var store
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.openURL) private var openURL
 
     @State private var selection = Set<String>()
     @State private var editMode = EditMode.inactive
     @State private var showSettings = false
+    @State private var openItem: Item?
 
     private var board: Board { store.board }
 
@@ -34,6 +34,9 @@ struct TodayView: View {
             .navigationTitle(title)
             .navigationSubtitle(subtitle)
             .toolbar { toolbar }
+            .navigationDestination(item: $openItem) { item in
+                EmailView(item: item)
+            }
             .environment(\.editMode, $editMode)
             .refreshable { await store.refresh() }
             .sheet(isPresented: $showSettings) {
@@ -54,7 +57,7 @@ struct TodayView: View {
     // MARK: - List
 
     private var list: some View {
-        // Rows are only selectable in Select mode; otherwise a tap opens the email.
+        // Rows are only selectable in Select mode; otherwise a tap opens the email in the app.
         List(selection: editMode.isEditing ? $selection : .constant(Set<String>())) {
             ForEach(board.power) { item in
                 PowerCard(item: item)
@@ -68,8 +71,8 @@ struct TodayView: View {
                             .tag(item.id)
                             .contentShape(.rect)
                             .simultaneousGesture(TapGesture().onEnded {
-                                guard !editMode.isEditing, let url = item.emailURL else { return }
-                                openURL(url)
+                                guard !editMode.isEditing, item.messageID != nil else { return }
+                                openItem = item
                             })
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button("Done", systemImage: "checkmark") {
@@ -78,14 +81,14 @@ struct TodayView: View {
                                 .tint(.green)
                             }
                             .swipeActions(edge: .leading) {
-                                if let url = item.emailURL {
-                                    Button("Open Email", systemImage: "envelope.fill") { openURL(url) }
+                                if item.messageID != nil {
+                                    Button("Open Email", systemImage: "envelope.fill") { openItem = item }
                                         .tint(.blue)
                                 }
                             }
                             .contextMenu {
-                                if let url = item.emailURL {
-                                    Button("Open Email", systemImage: "envelope") { openURL(url) }
+                                if item.messageID != nil {
+                                    Button("Open Email", systemImage: "envelope") { openItem = item }
                                 }
                                 Button("Mark Done", systemImage: "checkmark.circle") {
                                     Task { await store.markDone([item.id]) }
