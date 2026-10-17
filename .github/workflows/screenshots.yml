@@ -58,6 +58,7 @@ jobs:
           shot today-light light
           shot today-dark dark
           shot focus-light light -demoFocus
+          shot focus-dark dark -demoFocus
           shot venture-light light -demoVenture Vishramo
           shot venture-dark dark -demoVenture Vishramo
       - name: Publish screenshots
