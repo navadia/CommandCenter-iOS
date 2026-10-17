@@ -67,5 +67,6 @@ jobs:
         run: |
           mkdir -p shots; ls shots
           grep -E "error:" sim.log | head -40 > shots/errors.txt 2>/dev/null || true
+          find shots -type f -size 0 -delete
           gh release delete screenshots --yes --cleanup-tag || true
           gh release create screenshots shots/* --prerelease --title "Screenshots ($(git rev-parse --short HEAD))" --notes "Simulator, sample data"
