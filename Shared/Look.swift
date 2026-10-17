@@ -79,11 +79,53 @@ extension VentureStyle {
     }
 }
 
+/// How frosted the app's glass is: 0 = clear glass, 1 = solid. One setting
+/// for the whole app (Settings › Appearance), saved in the App Group.
+enum GlassPreference {
+    static let key = "glassFrost"
+    static let standard = 0.6
+}
+
+/// Frosted glass behind content. Mixes the system's thinnest blur with the
+/// card color by the user's Glass setting; fully solid when the iPhone's
+/// Reduce Transparency is on.
+struct Frosted<S: InsettableShape>: ViewModifier {
+    let shape: S
+    var edge = false
+
+    @AppStorage(GlassPreference.key, store: SharedStore.defaults) private var frost = GlassPreference.standard
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    func body(content: Content) -> some View {
+        content
+            .background {
+                let surface = Color(uiColor: .secondarySystemGroupedBackground)
+                if reduceTransparency || frost >= 0.99 {
+                    shape.fill(surface)
+                } else {
+                    ZStack {
+                        shape.fill(.ultraThinMaterial)
+                        shape.fill(surface.opacity(frost))
+                    }
+                }
+            }
+            .overlay {
+                if edge && !reduceTransparency && frost < 0.99 {
+                    shape.strokeBorder(.white.opacity(0.28), lineWidth: 0.75)
+                }
+            }
+    }
+}
+
 extension View {
-    /// A solid content card, like an inset grouped list in Settings.
+    /// A content card on the app's glass (see `Frosted`).
     func card(radius: CGFloat = 26) -> some View {
-        background(Color(uiColor: .secondarySystemGroupedBackground),
-                   in: .rect(cornerRadius: radius, style: .continuous))
+        modifier(Frosted(shape: RoundedRectangle(cornerRadius: radius, style: .continuous)))
+    }
+
+    /// A glass tile with a faint light edge, for rows sitting on a colored card.
+    func glassTile(radius: CGFloat = 18) -> some View {
+        modifier(Frosted(shape: RoundedRectangle(cornerRadius: radius, style: .continuous), edge: true))
     }
 }
 

@@ -12,6 +12,8 @@ struct SettingsView: View {
     @State private var gmailPassword = ""
     @State private var check: CheckState = .idle
     @State private var colorTick = 0
+    @AppStorage(GlassPreference.key, store: SharedStore.defaults) private var frost = GlassPreference.standard
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     enum CheckState: Equatable {
         case idle, checking, ok
@@ -94,6 +96,30 @@ struct SettingsView: View {
                     Text("Tap a color to change it everywhere: the app, the badges and the widget. Tap the selected color again to go back to the standard one.")
                 }
 
+                Section {
+                    glassPreview
+                    VStack(alignment: .leading, spacing: 6) {
+                        Slider(value: $frost, in: 0...1) {
+                            Text("Glass")
+                        } minimumValueLabel: {
+                            Text("Clear").font(.caption)
+                        } maximumValueLabel: {
+                            Text("Solid").font(.caption)
+                        }
+                        .disabled(reduceTransparency)
+                        if abs(frost - GlassPreference.standard) > 0.01 && !reduceTransparency {
+                            Button("Back to standard") { frost = GlassPreference.standard }
+                                .font(.footnote)
+                        }
+                    }
+                } header: {
+                    Text("Appearance")
+                } footer: {
+                    Text(reduceTransparency
+                         ? "Reduce Transparency is on in your iPhone settings, so the app is solid. Turn it off in Settings › Accessibility › Display & Text Size to use glass."
+                         : "How see-through the cards and email tiles are, everywhere in the app. It turns solid by itself when Reduce Transparency is on in iPhone Settings › Accessibility. The buttons and bars follow iPhone's own Liquid Glass setting in Display & Brightness.")
+                }
+
                 Section("Status") {
                     LabeledContent("Notion") {
                         Text(store.hasToken ? (store.errorMessage == nil ? "Connected" : "Error") : "Not set")
@@ -131,6 +157,35 @@ struct SettingsView: View {
                 }
             }
         }
+    }
+
+    /// A tiny live sample: a venture-colored card with one email tile on it.
+    private var glassPreview: some View {
+        let style = VentureStyle.of("Vishramo")
+        return HStack(spacing: 10) {
+            Circle()
+                .fill(LinearGradient(colors: [.hex(0xA5ABB8), .hex(0x858A95)], startPoint: .top, endPoint: .bottom))
+                .frame(width: 34, height: 34)
+                .overlay(Text("A").font(.subheadline.weight(.semibold)).foregroundStyle(.white))
+            VStack(alignment: .leading, spacing: 1) {
+                Text("AWS").font(.subheadline.weight(.semibold))
+                Text("CloudWatch alarm: disk at 91%").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(10)
+        .glassTile(radius: 14)
+        .padding(12)
+        .background(alignment: .topTrailing) {
+            Image(systemName: style.symbol)
+                .font(.system(size: 70, weight: .bold))
+                .foregroundStyle(.white.opacity(0.25))
+                .offset(x: 6, y: -6)
+        }
+        .background(style.fill, in: .rect(cornerRadius: 20, style: .continuous))
+        .clipShape(.rect(cornerRadius: 20, style: .continuous))
+        .listRowInsets(EdgeInsets(top: 10, leading: 12, bottom: 4, trailing: 12))
+        .accessibilityHidden(true)
     }
 
     private var colorVentures: [String] {

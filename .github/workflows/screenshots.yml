@@ -59,6 +59,7 @@ jobs:
           shot today-dark dark
           shot focus-light light -demoFocus
           shot focus-dark dark -demoFocus
+          shot settings-light light -demoSettings
           shot venture-light light -demoVenture Credaxe
           shot venture-dark dark -demoVenture Vishramo
       - name: Publish screenshots

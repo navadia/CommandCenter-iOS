@@ -71,11 +71,7 @@ struct VentureView: View {
                             showDivider: false)
                         // Frosted glass: the venture color glows through softly,
                         // but blurred enough that the text stays easy to read.
-                        .background(.regularMaterial, in: .rect(cornerRadius: 18, style: .continuous))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .strokeBorder(.white.opacity(0.28), lineWidth: 0.75)
-                        }
+                        .glassTile(radius: 18)
                         .contentShape(.rect)
                         .onTapGesture { if item.messageID != nil { openItem = item } }
                         .contextMenu {
