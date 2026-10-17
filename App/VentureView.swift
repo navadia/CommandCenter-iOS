@@ -45,8 +45,8 @@ struct VentureView: View {
         .navigationDestination(item: $openItem) { EmailView(item: $0) }
     }
 
-    /// The venture's colored card with its emails inside, each on its own
-    /// solid tile so nothing shows through behind the text.
+    /// The venture's colored card with its emails inside, each on a frosted
+    /// glass tile (blurred, so the card behind barely shows through).
     private func openCard(_ group: VentureGroup) -> some View {
         let style = group.style
         return VStack(alignment: .leading, spacing: 14) {
@@ -69,8 +69,13 @@ struct VentureView: View {
                     ItemRow(item: item, showBadge: false,
                             snoozed: store.board.snoozed.contains(item.id),
                             showDivider: false)
-                        .background(Color(uiColor: .secondarySystemGroupedBackground),
-                                    in: .rect(cornerRadius: 18, style: .continuous))
+                        // Frosted glass: the venture color glows through softly,
+                        // but blurred enough that the text stays easy to read.
+                        .background(.regularMaterial, in: .rect(cornerRadius: 18, style: .continuous))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .strokeBorder(.white.opacity(0.28), lineWidth: 0.75)
+                        }
                         .contentShape(.rect)
                         .onTapGesture { if item.messageID != nil { openItem = item } }
                         .contextMenu {
