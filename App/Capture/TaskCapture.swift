@@ -146,21 +146,30 @@ enum TaskReader {
     }
 
     static func date(in text: String) -> Date? {
-        guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue) else { return nil }
-        let range = NSRange(text.startIndex..., in: text)
         let calendar = Calendar.current
-        let start = calendar.startOfDay(for: .now)
-        for match in detector.matches(in: text, range: range) {
-            guard var date = match.date, let r = Range(match.range, in: text) else { continue }
-            let words = text[r]
-            // "1,284" or "7:58" alone aren't due dates.
-            guard words.contains(where: \.isLetter) || words.contains("/") else { continue }
-            // "Wednesday" can come back as last Wednesday: move it to the next one.
-            while date < start, words.lowercased().contains("day"),
-                  let next = calendar.date(byAdding: .day, value: 7, to: date) {
-                date = next
-            }
-            if date >= start { return calendar.startOfDay(for: date) }
+        let today = calendar.startOfDay(for: .now)
+        let lower = text.lowercased()
+        let words = Set(lower.split { !$0.isLetter }.map(String.init))
+
+        // Words first: iOS's date finder reads a bare "Wednesday" as today.
+        if words.contains("today") || words.contains("tonight") { return today }
+        if words.contains("tomorrow") { return calendar.date(byAdding: .day, value: 1, to: today) }
+        let weekdays = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]
+        for (index, name) in weekdays.enumerated() where words.contains(name) || words.contains(String(name.prefix(3))) {
+            let now = calendar.component(.weekday, from: today) - 1          // 0 = Sunday
+            let ahead = (index - now + 7) % 7
+            return calendar.date(byAdding: .day, value: ahead, to: today)
+        }
+
+        // Then real dates ("Oct 24", "10/24", "October 24, 2026").
+        guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue) else { return nil }
+        let months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
+        for match in detector.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
+            guard let date = match.date, let r = Range(match.range, in: text) else { continue }
+            let found = text[r].lowercased()
+            guard found.contains("/") || months.contains(where: { found.contains($0) }) else { continue }
+            let day = calendar.startOfDay(for: date)
+            if day >= today { return day }
         }
         return nil
     }
