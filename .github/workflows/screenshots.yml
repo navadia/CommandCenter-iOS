@@ -59,8 +59,8 @@ jobs:
           shot today-dark dark
           shot focus-light light -demoFocus
           shot focus-dark dark -demoFocus
-          shot venture-light light -demoVenture 7-Eleven
-          shot venture-dark dark -demoVenture Vishramo
+          shot venture-light light -demoVenture Credaxe
+          shot venture-dark dark -demoVenture 7-Eleven
       - name: Publish screenshots
         if: always()
         env:
