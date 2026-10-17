@@ -1,11 +1,13 @@
 import SwiftUI
 
-/// Round sender picture (website icon, or colored initial) with a small
-/// venture badge in the corner: who sent it and what it's about, at a glance.
+/// Round sender picture (website icon, or a Contacts-style monogram) with a
+/// small venture badge in the corner: who sent it and what it's about.
 struct SenderAvatar: View {
     let item: Item
     var size: CGFloat = 40
     var showBadge = true
+    /// The surface behind the avatar, so the badge's ring blends in.
+    var ring: Color = Color(uiColor: .secondarySystemGroupedBackground)
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
@@ -13,7 +15,7 @@ struct SenderAvatar: View {
                 .frame(width: size, height: size)
                 .clipShape(Circle())
             if showBadge {
-                VentureBadge(venture: item.venture, size: size * 0.46)
+                VentureBadge(venture: item.venture, size: size * 0.46, ring: ring)
                     .offset(x: size * 0.08, y: size * 0.08)
             }
         }
@@ -31,93 +33,64 @@ struct SenderAvatar: View {
                 .padding(size * 0.17)
                 .frame(width: size, height: size)
                 .background(Color.white)
+                .overlay(Circle().strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5))
         } else {
-            let tint = Pastel.for(item.sender)
+            // Like a contact without a photo.
             Text(item.initial)
-                .font(.system(size: size * 0.42, weight: .bold, design: .rounded))
-                .foregroundStyle(tint.ink)
+                .font(.system(size: size * 0.42, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white)
                 .frame(width: size, height: size)
-                .background(tint.paper)
+                .background(LinearGradient(colors: [.hex(0xA5ABB8), .hex(0x858A95)],
+                                           startPoint: .top, endPoint: .bottom))
         }
     }
 }
 
-/// The venture's color tile with its symbol.
+/// The venture's color tile with its symbol, like a Settings icon.
 struct VentureBadge: View {
     let venture: String
     var size: CGFloat = 20
-    var ring = true
+    var ring: Color? = Color(uiColor: .secondarySystemGroupedBackground)
 
     var body: some View {
         let style = VentureStyle.of(venture)
-        RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
-            .fill(style.color)
+        RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
+            .fill(style.fill)
             .overlay {
                 Image(systemName: style.symbol)
                     .font(.system(size: size * 0.52, weight: .semibold))
                     .foregroundStyle(.white)
             }
             .overlay {
-                if ring {
-                    RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
-                        .strokeBorder(Color(uiColor: .systemBackground), lineWidth: max(1.5, size * 0.09))
+                if let ring {
+                    RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
+                        .strokeBorder(ring, lineWidth: max(1.5, size * 0.09))
                 }
             }
             .frame(width: size, height: size)
     }
 }
 
-/// Soft background colors for letter avatars, picked from the sender name
-/// so a sender always gets the same one.
-enum Pastel {
-    private static let pairs: [(UInt32, UInt32)] = [
-        (0xE0E7FF, 0x3730A3), (0xDCFCE7, 0x166534), (0xFCE7F3, 0x9D174D), (0xFEF3C7, 0x92400E),
-        (0xE0F2FE, 0x075985), (0xF3E8FF, 0x6B21A8), (0xFFE4E6, 0x9F1239), (0xE2E8F0, 0x334155)
-    ]
-
-    static func `for`(_ name: String) -> (paper: Color, ink: Color) {
-        var hash: UInt32 = 5381
-        for scalar in name.lowercased().unicodeScalars { hash = (hash &* 33) &+ scalar.value }
-        let pair = pairs[Int(hash % UInt32(pairs.count))]
-        return (.hex(pair.0), .hex(pair.1))
-    }
-}
-
 extension VentureStyle {
-    /// The venture card fill: its color, slightly deeper toward the corner.
+    /// Shortcuts-style fill: the system color, a touch lighter at the top.
     var fill: LinearGradient {
-        LinearGradient(colors: [color, color.mix(with: .black, by: 0.22)],
-                       startPoint: .topLeading, endPoint: .bottomTrailing)
+        LinearGradient(colors: [color.mix(with: .white, by: 0.16), color],
+                       startPoint: .top, endPoint: .bottom)
     }
 }
 
-/// The sunrise behind everything: warm cream by day, deep night with an
-/// ember glow in dark mode.
-struct SunriseBackground: View {
-    @Environment(\.colorScheme) private var scheme
+extension View {
+    /// A solid content card, like an inset grouped list in Settings.
+    func card(radius: CGFloat = 26) -> some View {
+        background(Color(uiColor: .secondarySystemGroupedBackground),
+                   in: .rect(cornerRadius: radius, style: .continuous))
+    }
+}
 
+/// The plain system background used by Settings, Reminders and friends.
+struct AppBackground: View {
     var body: some View {
-        GeometryReader { geo in
-            let w = geo.size.width, h = geo.size.height
-            ZStack {
-                if scheme == .dark {
-                    Color.hex(0x14112A)
-                    RadialGradient(colors: [.hex(0x312A6E), .clear],
-                                   center: UnitPoint(x: 0, y: 0), startRadius: 0, endRadius: w * 1.1)
-                    RadialGradient(colors: [.brandOrange.opacity(0.38), .clear],
-                                   center: UnitPoint(x: 0.5, y: 1.08), startRadius: 0, endRadius: max(w, h * 0.5))
-                } else {
-                    Color.cream
-                    RadialGradient(colors: [.hex(0xFFD59A), .clear],
-                                   center: UnitPoint(x: 0.1, y: -0.05), startRadius: 0, endRadius: w * 1.2)
-                    RadialGradient(colors: [.hex(0xFFB8A6), .clear],
-                                   center: UnitPoint(x: 1.05, y: 0.18), startRadius: 0, endRadius: w * 0.95)
-                    RadialGradient(colors: [.hex(0xE6D9FF), .clear],
-                                   center: UnitPoint(x: 0.5, y: 1.05), startRadius: 0, endRadius: max(w, h * 0.5))
-                }
-            }
-        }
-        .ignoresSafeArea()
+        Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
     }
 }
 

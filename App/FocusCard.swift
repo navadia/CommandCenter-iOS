@@ -100,7 +100,8 @@ struct FocusCard: View {
         }
         .padding(large ? 22 : 16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassEffect(.regular, in: .rect(cornerRadius: large ? 34 : 28))
+        .card(radius: large ? 34 : 28)
+        .shadow(color: .black.opacity(0.07), radius: 12, y: 4)
         .animation(.easeOut(duration: 0.25), value: preview)
         .task(id: item.id) {
             preview = nil

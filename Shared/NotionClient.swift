@@ -72,6 +72,8 @@ struct NotionClient: Sendable {
         let titleParts = (p["Title"] as? [String: Any])?["title"] as? [[String: Any]] ?? []
         let title = titleParts.compactMap { $0["plain_text"] as? String }.joined()
         let due = ((p["Due"] as? [String: Any])?["date"] as? [String: Any])?["start"] as? String
+        let sourceParts = (p["Source"] as? [String: Any])?["rich_text"] as? [[String: Any]] ?? []
+        let source = sourceParts.compactMap { $0["plain_text"] as? String }.joined()
         let fpParts = (p["Fingerprint"] as? [String: Any])?["rich_text"] as? [[String: Any]] ?? []
         let fingerprint = fpParts.compactMap { $0["plain_text"] as? String }.joined()
         let domain = fingerprint.split(separator: "|").first.map(String.init).flatMap { $0.contains(".") ? $0 : nil }
@@ -86,7 +88,8 @@ struct NotionClient: Sendable {
             trial: (p["Trial"] as? [String: Any])?["checkbox"] as? Bool ?? false,
             link: (p["Link"] as? [String: Any])?["url"] as? String,
             domain: domain,
-            created: page["created_time"] as? String
+            created: page["created_time"] as? String,
+            source: source.isEmpty ? nil : source
         )
     }
 }

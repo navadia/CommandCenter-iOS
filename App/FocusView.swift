@@ -34,7 +34,7 @@ struct FocusView: View {
                         if index + 1 < queue.count {
                             RoundedRectangle(cornerRadius: 34, style: .continuous)
                                 .fill(.clear)
-                                .glassEffect(.regular, in: .rect(cornerRadius: 34))
+                                .card(radius: 34)
                                 .opacity(0.6)
                                 .padding(.horizontal, 16)
                                 .offset(y: 14)
@@ -57,7 +57,7 @@ struct FocusView: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 12)
             .animation(.spring(response: 0.4, dampingFraction: 0.82), value: index)
-            .background { SunriseBackground() }
+            .background { AppBackground() }
             .navigationTitle("Focus")
             .navigationSubtitle(current == nil ? "Finished" : "\(index + 1) of \(queue.count)")
             .navigationBarTitleDisplayMode(.inline)
@@ -124,6 +124,6 @@ struct FocusView: View {
         }
         .padding(32)
         .frame(maxWidth: .infinity)
-        .glassEffect(.regular, in: .rect(cornerRadius: 34))
+        .card(radius: 34)
     }
 }
