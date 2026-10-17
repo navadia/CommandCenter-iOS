@@ -66,17 +66,18 @@ struct FocusCard: View {
             if !large {
                 HStack(spacing: 8) {
                     Button(action: onLater) {
-                        Text("Later").fontWeight(.semibold).frame(maxWidth: .infinity)
+                        Text("Later").fontWeight(.semibold).lineLimit(1).frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.glass)
                     Button(action: onOpen) {
-                        Text("Open").fontWeight(.semibold).frame(maxWidth: .infinity)
+                        Text("Open").fontWeight(.semibold).lineLimit(1).frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.glass)
                     .disabled(item.messageID == nil)
                     Button(action: onDone) {
-                        Label("Done", systemImage: "checkmark")
+                        Text("Done")
                             .fontWeight(.bold)
+                            .lineLimit(1)
                             .foregroundStyle(Color.onInk)
                             .frame(maxWidth: .infinity)
                     }
