@@ -347,26 +347,27 @@ struct VentureCard: View {
     var body: some View {
         let style = group.style
         VStack(alignment: .leading, spacing: 2) {
-            Text(style.short).font(.headline)
-            Text("\(group.items.count) open").font(.caption.weight(.semibold)).opacity(0.85)
+            HStack(alignment: .center, spacing: 8) {
+                VentureBadge(venture: group.venture, size: 28, ring: nil)
+                Spacer(minLength: 0)
+                Text("\(group.items.count)")
+                    .font(.system(.title3, design: .rounded, weight: .bold))
+                    .monospacedDigit()
+            }
             Spacer(minLength: 0)
+            Text(style.short).font(.headline).lineLimit(1)
             if let top = group.items.first {
-                Text(top.subject.isEmpty ? top.sender : "\(top.sender) · \(top.subject)")
+                Text(top.sender)
                     .font(.caption)
+                    .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
         }
-        .foregroundStyle(.white)
         .padding(12)
-        .frame(width: 156, height: 110, alignment: .topLeading)
-        .background(alignment: .bottomTrailing) {
-            Image(systemName: style.symbol)
-                .font(.system(size: 64, weight: .bold))
-                .foregroundStyle(style.symbolColor.opacity(0.22))
-                .offset(x: 10, y: 12)
-        }
-        .background(style.fill, in: .rect(cornerRadius: 20, style: .continuous))
-        .clipShape(.rect(cornerRadius: 20, style: .continuous))
+        .frame(width: 140, height: 104, alignment: .topLeading)
+        .background { VentureWash(style: style, radius: 20) }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(style.short), \(group.items.count) open")
     }
 }
 

@@ -107,24 +107,26 @@ struct VentureView: View {
                     current = other.venture
                 } label: {
                     VStack(alignment: .leading, spacing: 2) {
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        HStack(alignment: .center, spacing: 10) {
+                            VentureBadge(venture: other.venture, size: 26, ring: nil)
                             Text(style.short).font(.headline)
-                            Text("\(other.items.count) open").font(.caption.weight(.semibold)).opacity(0.85)
                             Spacer()
-                            Image(systemName: style.symbol).font(.title3)
-                                .foregroundStyle(style.symbolColor.opacity(0.7))
+                            Text("\(other.items.count) open")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.secondary)
                         }
                         if let top = other.items.first {
                             Text(top.subject.isEmpty ? top.sender : "\(top.sender) · \(top.subject)")
-                                .font(.caption).opacity(0.9).lineLimit(1)
+                                .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                                .padding(.leading, 36)
                         }
                     }
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 13)
+                    .padding(.horizontal, 14)
+                    .padding(.top, 12)
                     .frame(maxWidth: .infinity, minHeight: index == others.count - 1 ? 76 : 116, alignment: .topLeading)
-                    .background(style.fill, in: .rect(cornerRadius: 22, style: .continuous))
-                    .shadow(color: .black.opacity(0.10), radius: 5, y: -2)
+                    // Muted on purpose: the open venture above is the one in focus.
+                    .background { VentureWash(style: style, radius: 22) }
+                    .shadow(color: .black.opacity(0.08), radius: 6, y: -2)
                 }
                 .buttonStyle(.plain)
                 .offset(y: CGFloat(index) * 58)

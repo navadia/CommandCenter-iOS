@@ -156,3 +156,41 @@ struct SunMark: View {
         .accessibilityHidden(true)
     }
 }
+
+/// A solid red "Due today" / "Overdue" pill, only for things due now, so the
+/// one thing that can't wait never blends in with the rest of the card.
+struct DueTag: View {
+    let text: String
+
+    init?(item: Item) {
+        guard let d = item.daysUntilDue, d <= 0 else { return nil }
+        text = (d < 0 || item.type == "money" || item.trial) ? item.whenText : "Due today"
+    }
+
+    var body: some View {
+        Text(text)
+            .font(.caption.weight(.bold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(Color.red, in: .capsule)
+            .fixedSize()
+    }
+}
+
+/// A quiet venture surface: the plain card with a faint wash of the venture's
+/// color. The badge carries the identity, so the open venture or the card that
+/// needs you stays the loudest thing on screen.
+struct VentureWash: View {
+    let style: VentureStyle
+    var radius: CGFloat = 20
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        ZStack {
+            shape.fill(Color(uiColor: .secondarySystemGroupedBackground))
+            shape.fill(style.color.opacity(0.10))
+            shape.strokeBorder(style.color.opacity(0.22), lineWidth: 0.75)
+        }
+    }
+}

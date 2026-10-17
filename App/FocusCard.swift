@@ -21,11 +21,13 @@ struct FocusCard: View {
                         .font(large ? .title2.bold() : .headline)
                         .lineLimit(1)
                     HStack(spacing: 6) {
+                        if let tag = DueTag(item: item) {
+                            tag
+                        }
                         Text(VentureStyle.of(item.venture).short)
-                        if !item.whenText.isEmpty {
+                        if DueTag(item: item) == nil, !item.whenText.isEmpty {
                             Text("·")
                             Text(item.whenText)
-                                .foregroundStyle(item.isUrgent || (item.daysUntilDue ?? 1) < 0 ? Color.red : Color.secondary)
                         }
                     }
                     .font(.subheadline.weight(.semibold))
