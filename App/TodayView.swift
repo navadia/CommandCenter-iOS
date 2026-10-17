@@ -45,7 +45,13 @@ struct TodayView: View {
                 Text(store.errorMessage ?? "")
             }
         }
-        .task { await store.refresh() }
+        .task {
+            await store.refresh()
+            if DemoData.isOn {
+                if ProcessInfo.processInfo.arguments.contains("-demoFocus") { showFocus = true }
+                if let venture = DemoData.argument(after: "-demoVenture") { openVenture = venture }
+            }
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { Task { await store.refresh() } }
         }
