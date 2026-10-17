@@ -46,6 +46,10 @@ final class ItemStore {
                 self.items = self.items      // redraw with any new icons
                 WidgetCenter.shared.reloadAllTimelines()
             }
+        } catch is CancellationError {
+            // A newer refresh or the system cut this one off: keep what we have.
+        } catch let error as URLError where error.code == .cancelled {
+            // Same, from URLSession.
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -62,10 +66,16 @@ final class ItemStore {
         guard let token = TokenStore.load() else {
             throw NotionClient.NotionError.http(401, "No Notion token")
         }
-        _ = try await NotionClient(token: token).create(
+        let saved = try await NotionClient(token: token).create(
             title: draft.notionTitle, type: draft.type, venture: draft.venture,
             amount: draft.amount, due: due, source: kind.rawValue)
-        await refresh()
+        // Show it right away; the next refresh brings it back from Notion anyway.
+        if let saved, !items.contains(where: { $0.id == saved.id }) {
+            items.append(saved)
+            SharedStore.saveSnapshot(items)
+            WidgetCenter.shared.reloadAllTimelines()
+        }
+        Task { await self.refresh() }
     }
 
     /// Optimistic: rows disappear at once; any that fail come back with an error.
