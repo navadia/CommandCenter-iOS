@@ -49,6 +49,7 @@ struct TodayView: View {
             await store.refresh()
             if DemoData.isOn {
                 if ProcessInfo.processInfo.arguments.contains("-demoFocus") { showFocus = true }
+                if ProcessInfo.processInfo.arguments.contains("-demoSettings") { showSettings = true }
                 if let venture = DemoData.argument(after: "-demoVenture") { openVenture = venture }
             }
         }
