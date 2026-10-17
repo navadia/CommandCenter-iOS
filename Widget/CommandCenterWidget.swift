@@ -165,9 +165,9 @@ struct CommandCenterWidgetView: View {
             Button(intent: MarkDoneIntent(itemID: item.id)) {
                 Image(systemName: "checkmark")
                     .font(.subheadline.weight(.heavy))
-                    .foregroundStyle(Color.cream)
+                    .foregroundStyle(Color.onInk)
                     .frame(width: 36, height: 36)
-                    .background(Color.night, in: .circle)
+                    .background(Color.ink, in: .circle)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Mark \(item.sender) done")
@@ -263,9 +263,9 @@ struct CommandCenterWidgetView: View {
                 Button(intent: MarkDoneIntent(itemID: item.id)) {
                     Text("Done")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.cream)
+                        .foregroundStyle(Color.onInk)
                         .frame(maxWidth: .infinity, minHeight: 32)
-                        .background(Color.night, in: .capsule)
+                        .background(Color.ink, in: .capsule)
                 }
                 .buttonStyle(.plain)
             }

@@ -78,8 +78,10 @@ struct Item: Identifiable, Codable, Hashable, Sendable {
     /// "Due today", "Converts Monday", "Oct 24", or how long ago it arrived.
     var whenText: String {
         if let due = dueText {
-            if trial { return "Converts " + due.lowercased() }
-            return type == "money" ? "Due " + due.lowercased() : due
+            let word = ["Today", "Tomorrow", "Overdue"].contains(due) ? due.lowercased() : due
+            if trial { return due == "Overdue" ? "Converted" : "Converts " + word }
+            if type == "money" { return due == "Overdue" ? "Overdue" : "Due " + word }
+            return due
         }
         return createdText ?? ""
     }
@@ -186,6 +188,15 @@ extension Color {
     static let amber = Color.hex(0xFFB020)
     static let brandOrange = Color.hex(0xFF7A1A)
     static let coral = Color.hex(0xFF5A4E)
+
+    /// Main button fill: Night in light mode, Cream in dark mode.
+    static let ink = Color(uiColor: UIColor { $0.userInterfaceStyle == .dark
+        ? UIColor(red: 1, green: 0.957, blue: 0.902, alpha: 1)
+        : UIColor(red: 0.102, green: 0.086, blue: 0.2, alpha: 1) })
+    /// Text on an `ink` fill.
+    static let onInk = Color(uiColor: UIColor { $0.userInterfaceStyle == .dark
+        ? UIColor(red: 0.102, green: 0.086, blue: 0.2, alpha: 1)
+        : UIColor(red: 1, green: 0.957, blue: 0.902, alpha: 1) })
 }
 
 // MARK: - Snooze ("Later")

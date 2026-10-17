@@ -89,11 +89,12 @@ struct FocusView: View {
         VStack(spacing: 6) {
             if prominent {
                 Button(action: action) {
-                    Image(systemName: systemImage).font(.title2.bold()).frame(width: 64, height: 64)
+                    Image(systemName: systemImage).font(.title2.bold()).foregroundStyle(Color.onInk)
+                        .frame(width: 64, height: 64)
                 }
                 .buttonStyle(.glassProminent)
                 .buttonBorderShape(.circle)
-                .tint(.night)
+                .tint(.ink)
             } else {
                 Button(action: action) {
                     Image(systemName: systemImage).font(.title2.weight(.semibold)).frame(width: 64, height: 64)
@@ -115,9 +116,9 @@ struct FocusView: View {
                                : "\(doneCount) done · \(laterCount) for tomorrow")
                 .font(.body)
                 .foregroundStyle(.secondary)
-            Button("Back to Today") { dismiss() }
+            Button { dismiss() } label: { Text("Back to Today").foregroundStyle(Color.onInk) }
                 .buttonStyle(.glassProminent)
-                .tint(.night)
+                .tint(.ink)
                 .controlSize(.large)
                 .padding(.top, 8)
         }

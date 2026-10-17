@@ -253,10 +253,11 @@ struct TodayView: View {
                     done(ids)
                 } label: {
                     Text(selection.isEmpty ? "Select Items" : "Mark \(selection.count) Done")
+                        .foregroundStyle(Color.onInk)
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.glassProminent)
-                .tint(.night)
+                .tint(.ink)
                 .disabled(selection.isEmpty)
             }
         }
@@ -267,9 +268,9 @@ struct TodayView: View {
             Label("Connect Notion", systemImage: "key.fill").font(.headline)
             Text("Add the Notion token your widget uses to see your items here.")
                 .font(.subheadline).foregroundStyle(.secondary)
-            Button("Add Token") { showSettings = true }
+            Button { showSettings = true } label: { Text("Add Token").foregroundStyle(Color.onInk) }
                 .buttonStyle(.glassProminent)
-                .tint(.night)
+                .tint(.ink)
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -296,7 +297,7 @@ struct ItemRow: View {
             if selecting {
                 Image(systemName: selected ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
-                    .foregroundStyle(selected ? Color.night : Color.secondary)
+                    .foregroundStyle(selected ? Color.ink : Color.secondary)
                     .transition(.move(edge: .leading).combined(with: .opacity))
             }
             SenderAvatar(item: item, size: 40)
