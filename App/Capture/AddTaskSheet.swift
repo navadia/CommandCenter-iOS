@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Check what the app read, fix anything, save to Notion. Opened by the "+"
-/// button, the Action button (Add Task) and Back Tap (Add Task from Screenshot).
+/// button, the Action button (Add Task) and Back Tap (Add Task from Screenshot),
+/// and, with an existing item, as the Edit sheet (long-press › Edit).
 struct AddTaskSheet: View {
     let request: CaptureRequest
 
@@ -10,6 +11,7 @@ struct AddTaskSheet: View {
 
     @State private var draft = TaskDraft()
     @State private var guessedVenture = ""
+    @State private var original = TaskDraft()
     @State private var readText = ""
     @State private var amountText = ""
     @State private var hasDue = false
@@ -74,6 +76,15 @@ struct AddTaskSheet: View {
                     }
                 }
 
+                if editing != nil {
+                    Section {
+                        Button("Mark Done", systemImage: "checkmark.circle") {
+                            if let item = editing { Task { await store.markDone([item.id]) } }
+                            dismiss()
+                        }
+                    }
+                }
+
                 if !readText.isEmpty && isImage {
                     Section("What the screenshot says") {
                         Text(readText)
@@ -105,13 +116,13 @@ struct AddTaskSheet: View {
                     if saving {
                         ProgressView()
                     } else {
-                        Button("Add", systemImage: "checkmark") { Task { await save() } }
+                        Button(editing == nil ? "Add" : "Save", systemImage: "checkmark") { Task { await save() } }
                             .buttonStyle(.glassProminent)
                             .disabled(reading || draft.title.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
                 }
             }
-            .alert("Couldn't add it", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
+            .alert(editing == nil ? "Couldn't add it" : "Couldn't save it", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(error ?? "")
@@ -120,8 +131,14 @@ struct AddTaskSheet: View {
         .task { await read() }
     }
 
+    private var editing: Item? {
+        if case .edit(let item) = request.input { return item }
+        return nil
+    }
+
     private var title: String {
-        switch request.kind {
+        if editing != nil { return "Edit Task" }
+        return switch request.kind {
         case .screenshot: "Add from Screen"
         case .voice: "Add Task"
         case .typed: "New Task"
@@ -152,6 +169,9 @@ struct AddTaskSheet: View {
             readText = words
         case .image(let data):
             readText = (try? await TaskReader.text(in: data)) ?? ""
+        case .edit(let item):
+            fill(from: item)
+            return
         }
         if !readText.isEmpty {
             draft = await TaskReader.draft(from: readText, kind: request.kind)
@@ -165,6 +185,22 @@ struct AddTaskSheet: View {
         if draft.title.isEmpty { titleFocused = true }
     }
 
+    /// The Edit sheet starts from the item as it is.
+    private func fill(from item: Item) {
+        var d = TaskDraft()
+        if item.subject.isEmpty { d.title = item.sender } else { d.from = item.sender; d.title = item.subject }
+        d.type = TaskDraft.types.contains(item.type) ? item.type : "todo"
+        d.venture = item.venture == "HotelOS" ? "Vishramo" : item.venture
+        d.amount = item.amount
+        d.due = item.due.flatMap { Item.dayFormatter.date(from: String($0.prefix(10))) }
+        draft = d
+        original = d
+        amountText = d.amount.map { $0.formatted(.number.precision(.fractionLength(0...2)).grouping(.never)) } ?? ""
+        if let due = d.due { dueDate = due; hasDue = true }
+        guessedVenture = d.venture
+        reading = false
+    }
+
     private func save() async {
         var final = draft
         final.amount = Double(amountText.replacingOccurrences(of: "$", with: "").replacingOccurrences(of: ",", with: ""))
@@ -172,7 +208,11 @@ struct AddTaskSheet: View {
         saving = true
         defer { saving = false }
         do {
-            try await store.add(final, kind: request.kind)
+            if let item = editing {
+                try await store.update(item, changes(from: final, item: item))
+            } else {
+                try await store.add(final, kind: request.kind)
+            }
             // A corrected venture is remembered for this sender.
             if final.venture != guessedVenture, !final.from.isEmpty {
                 VentureMemory.remember(from: final.from, venture: final.venture)
@@ -181,5 +221,18 @@ struct AddTaskSheet: View {
         } catch {
             self.error = error.localizedDescription
         }
+    }
+
+    /// Only what was actually changed goes to Notion, so the parser's title,
+    /// a due time, etc. stay as they were.
+    private func changes(from final: TaskDraft, item: Item) -> NotionClient.Changes {
+        var c = NotionClient.Changes()
+        let day = { (date: Date?) in date.map { Item.dayFormatter.string(from: $0) } }
+        if final.from != original.from || final.title != original.title { c.title = final.notionTitle }
+        if final.type != original.type { c.type = final.type }
+        if final.venture != original.venture { c.venture = final.venture }
+        if final.amount != original.amount { c.amount = .some(final.amount) }
+        if day(final.due) != day(original.due) { c.due = .some(day(final.due)) }
+        return c
     }
 }

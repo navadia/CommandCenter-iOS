@@ -82,6 +82,11 @@ struct EmailView: View {
 
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Button("Edit", systemImage: "pencil") {
+                CaptureCenter.shared.request = CaptureRequest(input: .edit(item), kind: .typed)
+            }
+        }
         if message?.hasRemoteImages == true {
             ToolbarItem(placement: .topBarTrailing) {
                 Button(showImages ? "Hide Images" : "Show Images",

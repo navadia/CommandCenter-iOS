@@ -78,6 +78,28 @@ final class ItemStore {
         Task { await self.refresh() }
     }
 
+    /// Saves edits from the Edit sheet; the row updates at once.
+    func update(_ item: Item, _ changes: NotionClient.Changes) async throws {
+        guard !changes.isEmpty else { return }
+        let edited = Item(id: item.id, title: changes.title ?? item.title, type: changes.type ?? item.type,
+                          venture: changes.venture ?? item.venture,
+                          amount: changes.amount ?? item.amount, due: changes.due ?? item.due,
+                          trial: item.trial, link: item.link, domain: item.domain,
+                          created: item.created, source: item.source)
+        func put(_ row: Item) {
+            if let i = items.firstIndex(where: { $0.id == row.id }) { items[i] = row }
+            SharedStore.saveSnapshot(items)
+            WidgetCenter.shared.reloadAllTimelines()
+        }
+        if DemoData.isOn { put(edited); return }
+        guard let token = TokenStore.load() else { throw NotionClient.NotionError.http(401, "No Notion token") }
+        let saved = try await NotionClient(token: token).update(item.id, changes)
+        put(saved.map { row in
+            Item(id: row.id, title: row.title, type: row.type, venture: row.venture, amount: row.amount, due: row.due,
+                 trial: row.trial, link: row.link, domain: row.domain ?? item.domain, created: row.created, source: row.source)
+        } ?? edited)
+    }
+
     /// Optimistic: rows disappear at once; any that fail come back with an error.
     func markDone(_ ids: Set<String>) async {
         if DemoData.isOn { items.removeAll { ids.contains($0.id) }; return }

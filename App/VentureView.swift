@@ -76,6 +76,9 @@ struct VentureView: View {
                         .contentShape(.rect)
                         .onTapGesture { if item.messageID != nil { openItem = item } }
                         .contextMenu {
+                            Button("Edit", systemImage: "pencil") {
+                                CaptureCenter.shared.request = CaptureRequest(input: .edit(item), kind: .typed)
+                            }
                             if item.messageID != nil {
                                 Button("Open Email", systemImage: "envelope") { openItem = item }
                             }

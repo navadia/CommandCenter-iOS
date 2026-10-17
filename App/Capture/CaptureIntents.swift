@@ -5,7 +5,7 @@ import UniformTypeIdentifiers
 
 /// What the Add sheet should start from.
 struct CaptureRequest: Identifiable {
-    enum Input { case text(String), image(Data) }
+    enum Input { case text(String), image(Data), edit(Item) }
     let id = UUID()
     let input: Input
     let kind: CaptureKind

@@ -54,6 +54,9 @@ struct TodayView: View {
                 if ProcessInfo.processInfo.arguments.contains("-demoFocus") { showFocus = true }
                 if ProcessInfo.processInfo.arguments.contains("-demoSettings") { showSettings = true }
                 if let venture = DemoData.argument(after: "-demoVenture") { openVenture = venture }
+                if let id = DemoData.argument(after: "-demoEdit"), let item = store.items.first(where: { $0.id == id }) {
+                    edit(item)
+                }
                 if let words = DemoData.argument(after: "-demoAdd") {
                     CaptureCenter.shared.request = CaptureRequest(input: .text(words), kind: .voice)
                 }
@@ -109,6 +112,7 @@ struct TodayView: View {
                               onLater: { withAnimation { store.snooze(top.id) } },
                               onOpen: { openItem = top },
                               onDone: { done([top.id]) })
+                        .contextMenu { menu(for: top) }
                 }
                 .id(top.id)
                 .transition(.asymmetric(insertion: .scale(scale: 0.94).combined(with: .opacity),
@@ -215,6 +219,7 @@ struct TodayView: View {
 
     @ViewBuilder
     private func menu(for item: Item) -> some View {
+        Button("Edit", systemImage: "pencil") { edit(item) }
         if item.messageID != nil {
             Button("Open Email", systemImage: "envelope") { openItem = item }
         }
@@ -224,6 +229,10 @@ struct TodayView: View {
         } else {
             Button("Later", systemImage: "moon") { store.snooze(item.id) }
         }
+    }
+
+    private func edit(_ item: Item) {
+        capture.request = CaptureRequest(input: .edit(item), kind: .typed)
     }
 
     private func done(_ ids: Set<String>) {

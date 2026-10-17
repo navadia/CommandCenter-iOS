@@ -75,6 +75,27 @@ struct NotionClient: Sendable {
         return Self.item(from: json)
     }
 
+    /// What changed on the Edit sheet; nil = leave as it is.
+    struct Changes {
+        var title: String?
+        var type: String?
+        var venture: String?
+        var amount: Double??      // .some(nil) clears it
+        var due: String??         // .some(nil) clears it
+        var isEmpty: Bool { title == nil && type == nil && venture == nil && amount == nil && due == nil }
+    }
+
+    func update(_ id: String, _ c: Changes) async throws -> Item? {
+        var props: [String: Any] = [:]
+        if let title = c.title { props["Title"] = ["title": [["text": ["content": String(title.prefix(200))]]]] }
+        if let type = c.type { props["Type"] = ["select": ["name": type]] }
+        if let venture = c.venture { props["Venture"] = ["select": ["name": venture]] }
+        if let amount = c.amount { props["Amount"] = ["number": amount.map { $0 as Any } ?? NSNull()] }
+        if let due = c.due { props["Due"] = ["date": due.map { ["start": $0] as Any } ?? NSNull()] }
+        let json = try await send(request("pages/\(id)", method: "PATCH", body: ["properties": props]))
+        return Self.item(from: json)
+    }
+
     func markDone(_ id: String) async throws {
         let body: [String: Any] = ["properties": ["Status": ["select": ["name": "done"]]]]
         _ = try await send(request("pages/\(id)", method: "PATCH", body: body))
