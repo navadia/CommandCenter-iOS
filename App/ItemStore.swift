@@ -87,7 +87,6 @@ final class ItemStore {
 
     /// Redraw everything (and the widget) after a venture color change.
     func ventureColorsChanged() {
-        items = items
         WidgetCenter.shared.reloadAllTimelines()
     }
 
