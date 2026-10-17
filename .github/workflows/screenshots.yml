@@ -1,0 +1,71 @@
+name: Simulator screenshots
+
+# Runs when a commit message contains [shots]: builds for the iPhone
+# Simulator, opens the app with sample data (-demoData) in light and dark,
+# and attaches the screenshots to the "screenshots" release.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  shots:
+    if: contains(github.event.head_commit.message, '[shots]')
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use the newest Xcode
+        run: |
+          XCODE=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE"
+      - run: brew install xcodegen
+      - run: xcodegen generate
+      - name: Pick and boot a simulator
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json,sys
+          d=json.load(sys.stdin)['devices']
+          c=[x for k,v in d.items() if 'iOS' in k for x in v if x['name'].startswith('iPhone') and 'Pro' in x['name'] and 'Max' not in x['name']]
+          c.sort(key=lambda x: x['name']); print(c[-1]['udid'])")
+          echo "UDID=$UDID" >> $GITHUB_ENV
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+      - name: Build for the simulator
+        run: |
+          set -o pipefail
+          xcodebuild build -project CommandCenter.xcodeproj -scheme CommandCenter -configuration Debug \
+            -destination "id=$UDID" -derivedDataPath simbuild CODE_SIGNING_ALLOWED=NO 2>&1 \
+            | tee sim.log | grep -E "error:|BUILD (SUCCEEDED|FAILED)" || true
+          test -d simbuild/Build/Products/Debug-iphonesimulator/CommandCenter.app
+      - name: Screenshots
+        run: |
+          APP=simbuild/Build/Products/Debug-iphonesimulator/CommandCenter.app
+          xcrun simctl install "$UDID" "$APP"
+          xcrun simctl status_bar "$UDID" override --time 7:58 --batteryState charged --batteryLevel 100 || true
+          mkdir -p shots
+          shot() { # name, appearance, extra args...
+            local name=$1 look=$2; shift 2
+            xcrun simctl ui "$UDID" appearance "$look"
+            xcrun simctl terminate "$UDID" com.navadia.commandcenter 2>/dev/null || true
+            xcrun simctl launch "$UDID" com.navadia.commandcenter -demoData "$@"
+            sleep 14
+            xcrun simctl io "$UDID" screenshot "shots/$name.png"
+          }
+          shot today-light light
+          shot today-dark dark
+          shot focus-light light -demoFocus
+          shot venture-light light -demoVenture Vishramo
+          shot venture-dark dark -demoVenture Vishramo
+      - name: Publish screenshots
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p shots; ls shots
+          grep -E "error:" sim.log | head -40 > shots/errors.txt 2>/dev/null || true
+          gh release delete screenshots --yes --cleanup-tag || true
+          gh release create screenshots shots/* --prerelease --title "Screenshots ($(git rev-parse --short HEAD))" --notes "Simulator, sample data"

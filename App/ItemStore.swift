@@ -16,6 +16,15 @@ final class ItemStore {
     var board: Board { Board(items, snoozed: snoozed) }
 
     func refresh() async {
+        if DemoData.isOn {
+            items = DemoData.items
+            hasToken = true
+            lastUpdated = .now
+            let domains = items.compactMap(\.domain)
+            await SenderIcons.prefetch(domains)
+            items = items
+            return
+        }
         guard let token = TokenStore.load() else {
             hasToken = false
             return
@@ -44,6 +53,7 @@ final class ItemStore {
 
     /// Optimistic: rows disappear at once; any that fail come back with an error.
     func markDone(_ ids: Set<String>) async {
+        if DemoData.isOn { items.removeAll { ids.contains($0.id) }; return }
         guard let token = TokenStore.load(), !ids.isEmpty else { return }
         let removed = items.filter { ids.contains($0.id) }
         items.removeAll { ids.contains($0.id) }
