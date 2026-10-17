@@ -173,11 +173,18 @@ struct VentureStyle: Sendable {
     let symbol: String
     let order: Int       // businesses first
 
+    /// The venture's style, with the color the user picked in Settings if any.
     static func of(_ venture: String) -> VentureStyle {
+        let base = standard(venture)
+        guard let picked = VentureColors.picked(for: base.short) else { return base }
+        return VentureStyle(short: base.short, color: picked, symbol: base.symbol, order: base.order)
+    }
+
+    static func standard(_ venture: String) -> VentureStyle {
         switch venture {
         case "Vishramo", "HotelOS": .init(short: "Vishramo", color: .purple, symbol: "bed.double.fill", order: 0)
-        case "Credaxe": .init(short: "Credaxe", color: .blue, symbol: "chart.line.uptrend.xyaxis", order: 1)
-        case "7-Eleven": .init(short: "7-Eleven", color: .teal, symbol: "storefront.fill", order: 2)
+        case "Credaxe": .init(short: "Credaxe", color: VentureColors.credaxeGold, symbol: "chart.line.uptrend.xyaxis", order: 1)
+        case "7-Eleven": .init(short: "7-Eleven", color: .orange, symbol: "storefront.fill", order: 2)
         case "Job (hired)": .init(short: "Job", color: .brown, symbol: "briefcase.fill", order: 3)
         case "Banking": .init(short: "Banking", color: .mint, symbol: "building.columns.fill", order: 4)
         case "Personal": .init(short: "Personal", color: .indigo, symbol: "person.fill", order: 10)
@@ -185,15 +192,46 @@ struct VentureStyle: Sendable {
         case "Family/General": .init(short: "Family", color: .pink, symbol: "figure.2.and.child.holdinghands", order: 12)
         case "Travel": .init(short: "Travel", color: .cyan, symbol: "airplane", order: 13)
         case "Job Applications": .init(short: "Jobs", color: .brown, symbol: "briefcase.fill", order: 14)
-        case "Shopping": .init(short: "Shopping", color: .orange, symbol: "bag.fill", order: 15)
-        case "Food": .init(short: "Food", color: .yellow, symbol: "fork.knife", order: 16)
+        case "Shopping": .init(short: "Shopping", color: .yellow, symbol: "bag.fill", order: 15)
+        case "Food": .init(short: "Food", color: .red, symbol: "fork.knife", order: 16)
         case "Pseudo": .init(short: "Pseudo", color: .gray, symbol: "eye.slash.fill", order: 17)
-        case "Social": .init(short: "Social", color: .red, symbol: "bubble.left.and.bubble.right.fill", order: 18)
+        case "Social": .init(short: "Social", color: .teal, symbol: "bubble.left.and.bubble.right.fill", order: 18)
         case "Gaming": .init(short: "Gaming", color: .indigo, symbol: "gamecontroller.fill", order: 19)
         case "Streaming": .init(short: "Streaming", color: .red, symbol: "play.tv.fill", order: 20)
         case "Services": .init(short: "Services", color: .gray, symbol: "gearshape.fill", order: 21)
         default: .init(short: venture, color: .gray, symbol: "tray.fill", order: 30)
         }
+    }
+}
+
+/// Colors the user can pick per venture (Settings), saved in the App Group
+/// so the widget uses them too.
+enum VentureColors {
+    /// Credaxe's own brand gold (client/src/index.css: --color-primary #735C00).
+    static let credaxeGold = Color.hex(0x8A6D00)
+
+    static let palette: [(name: String, color: Color)] = [
+        ("Purple", .purple), ("Indigo", .indigo), ("Blue", .blue), ("Cyan", .cyan), ("Teal", .teal),
+        ("Mint", .mint), ("Green", .green), ("Gold", credaxeGold), ("Yellow", .yellow), ("Orange", .orange),
+        ("Red", .red), ("Pink", .pink), ("Brown", .brown), ("Gray", .gray),
+    ]
+
+    private static let key = "ventureColors"
+
+    static func pickedName(for short: String) -> String? {
+        (SharedStore.defaults.dictionary(forKey: key) as? [String: String])?[short]
+    }
+
+    static func picked(for short: String) -> Color? {
+        guard let name = pickedName(for: short) else { return nil }
+        return palette.first { $0.name == name }?.color
+    }
+
+    /// nil = back to the standard color.
+    static func set(_ name: String?, for short: String) {
+        var all = SharedStore.defaults.dictionary(forKey: key) as? [String: String] ?? [:]
+        all[short] = name
+        SharedStore.defaults.set(all, forKey: key)
     }
 }
 

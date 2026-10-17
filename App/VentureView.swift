@@ -19,8 +19,7 @@ struct VentureView: View {
         ScrollView {
             VStack(spacing: 14) {
                 if let group {
-                    header(group)
-                    list(group)
+                    openCard(group)
                 } else {
                     Text("Nothing open here anymore.")
                         .foregroundStyle(.secondary)
@@ -46,45 +45,55 @@ struct VentureView: View {
         .navigationDestination(item: $openItem) { EmailView(item: $0) }
     }
 
-    private func header(_ group: VentureGroup) -> some View {
+    /// The venture's colored card with its emails inside, each on its own
+    /// solid tile so nothing shows through behind the text.
+    private func openCard(_ group: VentureGroup) -> some View {
         let style = group.style
-        return HStack(spacing: 14) {
-            Image(systemName: style.symbol)
-                .font(.title2.weight(.semibold))
-                .frame(width: 52, height: 52)
-                .background(.white.opacity(0.22), in: .rect(cornerRadius: 14, style: .continuous))
-            VStack(alignment: .leading, spacing: 2) {
-                Text(style.short).font(.title.bold())
-                Text("\(group.items.count) open").font(.subheadline.weight(.medium)).opacity(0.9)
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 14) {
+                Image(systemName: style.symbol)
+                    .font(.title2.weight(.semibold))
+                    .frame(width: 52, height: 52)
+                    .background(.white.opacity(0.22), in: .rect(cornerRadius: 14, style: .continuous))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(style.short).font(.title.bold())
+                    Text("\(group.items.count) open").font(.subheadline.weight(.medium)).opacity(0.9)
+                }
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
-        }
-        .foregroundStyle(.white)
-        .padding(18)
-        .background(style.fill, in: .rect(cornerRadius: 26, style: .continuous))
-    }
+            .foregroundStyle(.white)
 
-    private func list(_ group: VentureGroup) -> some View {
-        VStack(spacing: 0) {
-            ForEach(Array(group.items.enumerated()), id: \.element.id) { index, item in
-                ItemRow(item: item, showBadge: false,
-                        snoozed: store.board.snoozed.contains(item.id),
-                        showDivider: index < group.items.count - 1)
-                    .contentShape(.rect)
-                    .onTapGesture { if item.messageID != nil { openItem = item } }
-                    .contextMenu {
-                        if item.messageID != nil {
-                            Button("Open Email", systemImage: "envelope") { openItem = item }
+            VStack(spacing: 8) {
+                ForEach(group.items) { item in
+                    ItemRow(item: item, showBadge: false,
+                            snoozed: store.board.snoozed.contains(item.id),
+                            showDivider: false)
+                        .background(Color(uiColor: .secondarySystemGroupedBackground),
+                                    in: .rect(cornerRadius: 18, style: .continuous))
+                        .contentShape(.rect)
+                        .onTapGesture { if item.messageID != nil { openItem = item } }
+                        .contextMenu {
+                            if item.messageID != nil {
+                                Button("Open Email", systemImage: "envelope") { openItem = item }
+                            }
+                            Button("Mark Done", systemImage: "checkmark.circle") {
+                                Task { await store.markDone([item.id]) }
+                            }
+                            Button("Later", systemImage: "moon") { store.snooze(item.id) }
                         }
-                        Button("Mark Done", systemImage: "checkmark.circle") {
-                            Task { await store.markDone([item.id]) }
-                        }
-                        Button("Later", systemImage: "moon") { store.snooze(item.id) }
-                    }
+                }
             }
         }
-        .padding(.vertical, 4)
-        .card(radius: 26)
+        .padding(14)
+        .padding(.top, 4)
+        .background(alignment: .topTrailing) {
+            Image(systemName: style.symbol)
+                .font(.system(size: 92, weight: .bold))
+                .foregroundStyle(.white.opacity(0.13))
+                .offset(x: 14, y: -12)
+        }
+        .background(style.fill, in: .rect(cornerRadius: 28, style: .continuous))
+        .clipShape(.rect(cornerRadius: 28, style: .continuous))
     }
 
     /// The other ventures, overlapping like passes in Wallet.

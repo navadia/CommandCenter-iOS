@@ -11,6 +11,7 @@ struct SettingsView: View {
     @State private var gmailAddress = GmailCredentials.savedAddress
     @State private var gmailPassword = ""
     @State private var check: CheckState = .idle
+    @State private var colorTick = 0
 
     enum CheckState: Equatable {
         case idle, checking, ok
@@ -83,6 +84,16 @@ struct SettingsView: View {
                     }
                 }
 
+                Section {
+                    ForEach(colorVentures, id: \.self) { venture in
+                        colorRow(venture)
+                    }
+                } header: {
+                    Text("Venture Colors")
+                } footer: {
+                    Text("Tap a color to change it everywhere: the app, the badges and the widget. Tap the selected color again to go back to the standard one.")
+                }
+
                 Section("Status") {
                     LabeledContent("Notion") {
                         Text(store.hasToken ? (store.errorMessage == nil ? "Connected" : "Error") : "Not set")
@@ -120,6 +131,58 @@ struct SettingsView: View {
                 }
             }
         }
+    }
+
+    private var colorVentures: [String] {
+        let standard = ["Vishramo", "Credaxe", "7-Eleven", "Personal", "Shared/Household", "Family/General",
+                        "Travel", "Job Applications", "Pseudo"]
+        let present = store.board.ventures.map(\.venture).filter { !standard.contains($0) && $0 != "HotelOS" }
+        return standard + present
+    }
+
+    private func colorRow(_ venture: String) -> some View {
+        let _ = colorTick
+        let style = VentureStyle.of(venture)
+        let picked = VentureColors.pickedName(for: style.short)
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 12) {
+                VentureBadge(venture: venture, size: 30, ring: nil)
+                Text(style.short)
+                Spacer()
+                if picked != nil {
+                    Text("Custom").font(.footnote).foregroundStyle(.secondary)
+                }
+            }
+            ScrollView(.horizontal) {
+                HStack(spacing: 10) {
+                    ForEach(VentureColors.palette, id: \.name) { option in
+                        let isOn = picked == option.name
+                        Button {
+                            VentureColors.set(isOn ? nil : option.name, for: style.short)
+                            colorTick += 1
+                            store.ventureColorsChanged()
+                        } label: {
+                            Circle()
+                                .fill(option.color)
+                                .frame(width: 28, height: 28)
+                                .overlay {
+                                    if isOn {
+                                        Image(systemName: "checkmark")
+                                            .font(.caption.weight(.bold))
+                                            .foregroundStyle(.white)
+                                    }
+                                }
+                                .padding(3)
+                                .overlay(Circle().strokeBorder(isOn ? option.color : .clear, lineWidth: 2))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("\(option.name)\(isOn ? ", selected" : "")")
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+        }
+        .padding(.vertical, 4)
     }
 
     private var hasChanges: Bool {

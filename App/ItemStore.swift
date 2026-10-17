@@ -85,6 +85,12 @@ final class ItemStore {
         WidgetCenter.shared.reloadAllTimelines()
     }
 
+    /// Redraw everything (and the widget) after a venture color change.
+    func ventureColorsChanged() {
+        items = items
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
     func saveToken(_ token: String) async -> String {
         let place = TokenStore.save(token.trimmingCharacters(in: .whitespacesAndNewlines))
         await refresh()
