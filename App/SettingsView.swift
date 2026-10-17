@@ -12,6 +12,7 @@ struct SettingsView: View {
     @State private var gmailPassword = ""
     @State private var check: CheckState = .idle
     @State private var colorTick = 0
+    @State private var editingColor: String?
     @AppStorage(GlassPreference.key, store: SharedStore.defaults) private var frost = GlassPreference.standard
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
@@ -93,7 +94,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Venture Colors")
                 } footer: {
-                    Text("Tap a color to change it everywhere: the app, the badges and the widget. Tap the selected color again to go back to the standard one.")
+                    Text("Tap a venture to pick its color. It changes everywhere: the app, the badges and the widget. Tap the selected color again to go back to the standard one.")
                 }
 
                 Section {
@@ -137,6 +138,9 @@ struct SettingsView: View {
                     }
                     LabeledContent("Shared storage", value: SharedStore.isGroupWorking ? "Working" : "Unavailable")
                 }
+            }
+            .onAppear {
+                if ProcessInfo.processInfo.arguments.contains("-demoSettings"), editingColor == nil { editingColor = "Credaxe" }
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
@@ -199,15 +203,26 @@ struct SettingsView: View {
         let _ = colorTick
         let style = VentureStyle.of(venture)
         let picked = VentureColors.pickedName(for: style.short)
+        let isOpen = editingColor == venture
         return VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 12) {
-                VentureBadge(venture: venture, size: 30, ring: nil)
-                Text(style.short)
-                Spacer()
-                if picked != nil {
-                    Text("Custom").font(.footnote).foregroundStyle(.secondary)
+            Button {
+                withAnimation(.snappy) { editingColor = isOpen ? nil : venture }
+            } label: {
+                HStack(spacing: 12) {
+                    VentureBadge(venture: venture, size: 30, ring: nil)
+                    Text(style.short).foregroundStyle(Color.primary)
+                    Spacer()
+                    Text(picked ?? "Standard").font(.subheadline).foregroundStyle(.secondary)
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                        .rotationEffect(.degrees(isOpen ? 90 : 0))
                 }
+                .contentShape(.rect)
             }
+            .buttonStyle(.plain)
+            .accessibilityHint(isOpen ? "Hides the colors" : "Shows the colors")
+            if isOpen {
             ScrollView(.horizontal) {
                 HStack(spacing: 10) {
                     ForEach(VentureColors.palette, id: \.name) { option in
@@ -236,6 +251,7 @@ struct SettingsView: View {
                 }
             }
             .scrollIndicators(.hidden)
+            }
         }
         .padding(.vertical, 4)
     }
