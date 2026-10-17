@@ -11,8 +11,10 @@ struct TodayView: View {
     @State private var showFocus = false
     @State private var selecting = false
     @State private var selection = Set<String>()
+    @State private var capture = CaptureCenter.shared
 
     private var board: Board { store.board }
+
 
     var body: some View {
         NavigationStack {
@@ -38,6 +40,7 @@ struct TodayView: View {
             .navigationDestination(item: $openVenture) { VentureView(venture: $0) }
             .refreshable { await store.refresh() }
             .sheet(isPresented: $showSettings) { SettingsView() }
+            .sheet(item: Bindable(capture).request) { AddTaskSheet(request: $0) }
             .fullScreenCover(isPresented: $showFocus) { FocusView() }
             .alert("Something went wrong", isPresented: errorBinding) {
                 Button("OK", role: .cancel) {}
@@ -51,6 +54,9 @@ struct TodayView: View {
                 if ProcessInfo.processInfo.arguments.contains("-demoFocus") { showFocus = true }
                 if ProcessInfo.processInfo.arguments.contains("-demoSettings") { showSettings = true }
                 if let venture = DemoData.argument(after: "-demoVenture") { openVenture = venture }
+                if let words = DemoData.argument(after: "-demoAdd") {
+                    CaptureCenter.shared.request = CaptureRequest(input: .text(words), kind: .voice)
+                }
             }
         }
         .onChange(of: scenePhase) { _, phase in
@@ -230,6 +236,14 @@ struct TodayView: View {
     private var toolbar: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             Button("Settings", systemImage: "gearshape") { showSettings = true }
+        }
+        if store.hasToken && !selecting {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Add Task", systemImage: "plus") {
+                    CaptureCenter.shared.request = CaptureRequest(input: .text(""), kind: .typed)
+                }
+            }
+            ToolbarSpacer(.fixed, placement: .topBarTrailing)
         }
         if store.hasToken && board.openCount > 0 {
             ToolbarItem(placement: .topBarTrailing) {
