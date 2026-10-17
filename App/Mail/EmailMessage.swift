@@ -24,6 +24,24 @@ struct EmailMessage: Sendable {
         self.text = text
     }
 
+    /// A couple of readable sentences for cards: plain text if the email has
+    /// it, otherwise the HTML with tags, styles and links removed.
+    var previewText: String {
+        var s = text ?? ""
+        if s.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, let html {
+            s = html.replacingOccurrences(of: #"(?is)<(style|script|head|title)\b[^>]*>.*?</\1\s*>"#, with: " ",
+                                          options: .regularExpression)
+            s = s.replacingOccurrences(of: #"(?is)<br\s*/?>|</(p|div|tr|li|h\d)>"#, with: "\n", options: .regularExpression)
+            s = s.replacingOccurrences(of: #"(?s)<[^>]+>"#, with: " ", options: .regularExpression)
+            s = MIME.decodeEntities(s)
+        }
+        s = s.replacingOccurrences(of: #"<?https?://\S+>?"#, with: " ", options: .regularExpression)
+        s = s.replacingOccurrences(of: #"[\u200B-\u200D\u034F\u00AD\uFEFF]"#, with: "", options: .regularExpression)
+        s = s.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return s.count > 240 ? String(s.prefix(240)) + "…" : s
+    }
+
     var hasRemoteImages: Bool {
         guard let html else { return false }
         return html.range(of: #"<img[^>]+src\s*=\s*["']?https?:"#,
@@ -262,6 +280,29 @@ enum MIME {
             if let d = f.date(from: cleaned) { return d }
         }
         return nil
+    }
+
+    static func decodeEntities(_ s: String) -> String {
+        guard s.contains("&") else { return s }
+        var out = s
+        let named = ["&nbsp;": " ", "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": "\"", "&#39;": "'",
+                     "&apos;": "'", "&rsquo;": "\u{2019}", "&lsquo;": "\u{2018}", "&ldquo;": "\u{201C}",
+                     "&rdquo;": "\u{201D}", "&mdash;": "\u{2014}", "&ndash;": "\u{2013}", "&hellip;": "\u{2026}",
+                     "&zwnj;": "", "&copy;": "\u{00A9}", "&reg;": "\u{00AE}", "&trade;": "\u{2122}"]
+        for (k, v) in named { out = out.replacingOccurrences(of: k, with: v, options: .caseInsensitive) }
+        guard let re = try? NSRegularExpression(pattern: #"&#(x?)([0-9A-Fa-f]{1,6});"#) else { return out }
+        var result = ""
+        var last = out.startIndex
+        for m in re.matches(in: out, range: NSRange(out.startIndex..., in: out)) {
+            guard let whole = Range(m.range, in: out), let hexFlag = Range(m.range(at: 1), in: out),
+                  let num = Range(m.range(at: 2), in: out) else { continue }
+            result += out[last..<whole.lowerBound]
+            let value = UInt32(out[num], radix: out[hexFlag].isEmpty ? 10 : 16)
+            if let value, let scalar = Unicode.Scalar(value) { result.unicodeScalars.append(scalar) }
+            last = whole.upperBound
+        }
+        result += out[last...]
+        return result
     }
 
     static func escapeHTML(_ s: String) -> String {
