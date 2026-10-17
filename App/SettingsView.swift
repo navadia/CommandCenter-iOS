@@ -11,7 +11,6 @@ struct SettingsView: View {
     @State private var gmailAddress = GmailCredentials.savedAddress
     @State private var gmailPassword = ""
     @State private var check: CheckState = .idle
-    @State private var colorTick = 0
     @State private var editingColor: String?
     @AppStorage(GlassPreference.key, store: SharedStore.defaults) private var frost = GlassPreference.standard
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
@@ -89,7 +88,7 @@ struct SettingsView: View {
 
                 Section {
                     ForEach(colorVentures, id: \.self) { venture in
-                        colorRow(venture)
+                        VentureColorRow(venture: venture, editing: $editingColor)
                     }
                 } header: {
                     Text("Venture Colors")
@@ -199,63 +198,6 @@ struct SettingsView: View {
         return standard + present
     }
 
-    private func colorRow(_ venture: String) -> some View {
-        let _ = colorTick
-        let style = VentureStyle.of(venture)
-        let picked = VentureColors.pickedName(for: style.short)
-        let isOpen = editingColor == venture
-        return VStack(alignment: .leading, spacing: 10) {
-            Button {
-                withAnimation(.snappy) { editingColor = isOpen ? nil : venture }
-            } label: {
-                HStack(spacing: 12) {
-                    VentureBadge(venture: venture, size: 30, ring: nil)
-                    Text(style.short).foregroundStyle(Color.primary)
-                    Spacer()
-                    Text(picked ?? "Standard").font(.subheadline).foregroundStyle(.secondary)
-                    Image(systemName: "chevron.right")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.tertiary)
-                        .rotationEffect(.degrees(isOpen ? 90 : 0))
-                }
-                .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint(isOpen ? "Hides the colors" : "Shows the colors")
-            if isOpen {
-            ScrollView(.horizontal) {
-                HStack(spacing: 10) {
-                    ForEach(VentureColors.palette, id: \.name) { option in
-                        let isOn = picked == option.name
-                        Button {
-                            VentureColors.set(isOn ? nil : option.name, for: style.short)
-                            colorTick += 1
-                            store.ventureColorsChanged()
-                        } label: {
-                            Circle()
-                                .fill(option.color)
-                                .frame(width: 28, height: 28)
-                                .overlay {
-                                    if isOn {
-                                        Image(systemName: "checkmark")
-                                            .font(.caption.weight(.bold))
-                                            .foregroundStyle(.white)
-                                    }
-                                }
-                                .padding(3)
-                                .overlay(Circle().strokeBorder(isOn ? option.color : .clear, lineWidth: 2))
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("\(option.name)\(isOn ? ", selected" : "")")
-                    }
-                }
-            }
-            .scrollIndicators(.hidden)
-            }
-        }
-        .padding(.vertical, 4)
-    }
-
     private var hasChanges: Bool {
         !token.trimmed.isEmpty || !gmailPassword.trimmed.isEmpty
             || gmailAddress.trimmed != GmailCredentials.savedAddress
@@ -296,4 +238,67 @@ struct SettingsView: View {
 
 private extension String {
     var trimmed: String { trimmingCharacters(in: .whitespacesAndNewlines) }
+}
+
+/// One venture in Settings › Venture Colors: its badge and current color,
+/// and the swatches when it's the one being edited.
+private struct VentureColorRow: View {
+    let venture: String
+    @Binding var editing: String?
+    @Environment(ItemStore.self) private var store
+
+    var body: some View {
+        let style = VentureStyle.of(venture)
+        let picked = VentureColors.pickedName(for: style.short)
+        let isOpen = editing == venture
+        VStack(alignment: .leading, spacing: 10) {
+            Button {
+                withAnimation(.snappy) { editing = isOpen ? nil : venture }
+            } label: {
+                HStack(spacing: 12) {
+                    VentureBadge(venture: venture, size: 30, ring: nil)
+                    Text(style.short).foregroundStyle(Color.primary)
+                    Spacer()
+                    Text(picked ?? "Standard").font(.subheadline).foregroundStyle(.secondary)
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                        .rotationEffect(.degrees(isOpen ? 90 : 0))
+                }
+                .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint(isOpen ? "Hides the colors" : "Shows the colors")
+            if isOpen {
+                ScrollView(.horizontal) {
+                HStack(spacing: 10) {
+                    ForEach(VentureColors.palette, id: \.name) { option in
+                        let isOn = picked == option.name
+                        Button {
+                            VentureColors.set(isOn ? nil : option.name, for: style.short)
+                            store.ventureColorsChanged()
+                        } label: {
+                            Circle()
+                                .fill(option.color)
+                                .frame(width: 28, height: 28)
+                                .overlay {
+                                    if isOn {
+                                        Image(systemName: "checkmark")
+                                            .font(.caption.weight(.bold))
+                                            .foregroundStyle(.white)
+                                    }
+                                }
+                                .padding(3)
+                                .overlay(Circle().strokeBorder(isOn ? option.color : .clear, lineWidth: 2))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("\(option.name)\(isOn ? ", selected" : "")")
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+            }
+        }
+        .padding(.vertical, 4)
+    }
 }

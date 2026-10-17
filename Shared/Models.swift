@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import SwiftUI
 
 /// One open row from the Command Center database.
@@ -226,7 +227,10 @@ enum VentureColors {
     private static let key = "ventureColors"
 
     static func pickedName(for short: String) -> String? {
-        (SharedStore.defaults.dictionary(forKey: key) as? [String: String])?[short]
+        // Reading the version makes every view that shows a venture color
+        // redraw the moment a color is picked; the saved picks stay the truth.
+        _ = ColorPicks.shared.version
+        return (SharedStore.defaults.dictionary(forKey: key) as? [String: String])?[short]
     }
 
     static func picked(for short: String) -> Color? {
@@ -239,7 +243,16 @@ enum VentureColors {
         var all = SharedStore.defaults.dictionary(forKey: key) as? [String: String] ?? [:]
         all[short] = name
         SharedStore.defaults.set(all, forKey: key)
+        ColorPicks.shared.version += 1
     }
+}
+
+/// Bumped on every color change. SwiftUI watches it, so badges, cards and
+/// Settings update right away instead of after the app restarts.
+@Observable
+final class ColorPicks: @unchecked Sendable {
+    static let shared = ColorPicks()
+    var version = 0
 }
 
 extension Color {

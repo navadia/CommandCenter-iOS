@@ -6,6 +6,7 @@ struct VentureView: View {
     @Environment(ItemStore.self) private var store
     @State private var current: String
     @State private var openItem: Item?
+    @Namespace private var cards
 
     init(venture: String) {
         _current = State(initialValue: venture)
@@ -96,6 +97,7 @@ struct VentureView: View {
         }
         .background(style.fill, in: .rect(cornerRadius: 28, style: .continuous))
         .clipShape(.rect(cornerRadius: 28, style: .continuous))
+        .matchedGeometryEffect(id: group.venture, in: cards)
     }
 
     /// The other ventures, overlapping like passes in Wallet.
@@ -104,7 +106,7 @@ struct VentureView: View {
             ForEach(Array(others.enumerated()), id: \.element.id) { index, other in
                 let style = other.style
                 Button {
-                    current = other.venture
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.82)) { current = other.venture }
                 } label: {
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(alignment: .center, spacing: 10) {
@@ -129,7 +131,11 @@ struct VentureView: View {
                     .shadow(color: .black.opacity(0.08), radius: 6, y: -2)
                 }
                 .buttonStyle(.plain)
-                .offset(y: CGFloat(index) * 58)
+                // The same card in both places, so a tapped venture flies up
+                // and grows into the open card (and the old one drops back in).
+                .matchedGeometryEffect(id: other.venture, in: cards)
+                .padding(.top, CGFloat(index) * 58)
+                .zIndex(Double(index))
             }
         }
         .frame(height: CGFloat(others.count - 1) * 58 + 76, alignment: .top)
