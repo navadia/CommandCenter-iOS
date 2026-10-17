@@ -172,28 +172,30 @@ struct VentureStyle: Sendable {
     let color: Color
     let symbol: String
     let order: Int       // businesses first
+    var symbolColor: Color = .white   // Credaxe draws its symbol in its brand yellow
 
     /// The venture's style, with the color the user picked in Settings if any.
     static func of(_ venture: String) -> VentureStyle {
         let base = standard(venture)
         guard let picked = VentureColors.picked(for: base.short) else { return base }
-        return VentureStyle(short: base.short, color: picked, symbol: base.symbol, order: base.order)
+        return VentureStyle(short: base.short, color: picked, symbol: base.symbol, order: base.order)   // custom color, white symbol
     }
 
     static func standard(_ venture: String) -> VentureStyle {
         switch venture {
-        case "Vishramo", "HotelOS": .init(short: "Vishramo", color: .purple, symbol: "bed.double.fill", order: 0)
-        case "Credaxe": .init(short: "Credaxe", color: VentureColors.credaxeGold, symbol: "chart.line.uptrend.xyaxis", order: 1)
-        case "7-Eleven": .init(short: "7-Eleven", color: .orange, symbol: "storefront.fill", order: 2)
+        case "Vishramo", "HotelOS": .init(short: "Vishramo", color: VentureColors.vishramoBronze, symbol: "bed.double.fill", order: 0)
+        case "Credaxe": .init(short: "Credaxe", color: VentureColors.credaxeCharcoal, symbol: "chart.line.uptrend.xyaxis", order: 1,
+                              symbolColor: VentureColors.credaxeYellow)
+        case "7-Eleven": .init(short: "7-Eleven", color: .red, symbol: "storefront.fill", order: 2)
         case "Job (hired)": .init(short: "Job", color: .brown, symbol: "briefcase.fill", order: 3)
         case "Banking": .init(short: "Banking", color: .mint, symbol: "building.columns.fill", order: 4)
         case "Personal": .init(short: "Personal", color: .indigo, symbol: "person.fill", order: 10)
         case "Shared/Household": .init(short: "Household", color: .green, symbol: "house.fill", order: 11)
         case "Family/General": .init(short: "Family", color: .pink, symbol: "figure.2.and.child.holdinghands", order: 12)
         case "Travel": .init(short: "Travel", color: .cyan, symbol: "airplane", order: 13)
-        case "Job Applications": .init(short: "Jobs", color: .brown, symbol: "briefcase.fill", order: 14)
+        case "Job Applications": .init(short: "Jobs", color: .blue, symbol: "briefcase.fill", order: 14)
         case "Shopping": .init(short: "Shopping", color: .yellow, symbol: "bag.fill", order: 15)
-        case "Food": .init(short: "Food", color: .red, symbol: "fork.knife", order: 16)
+        case "Food": .init(short: "Food", color: .orange, symbol: "fork.knife", order: 16)
         case "Pseudo": .init(short: "Pseudo", color: .gray, symbol: "eye.slash.fill", order: 17)
         case "Social": .init(short: "Social", color: .teal, symbol: "bubble.left.and.bubble.right.fill", order: 18)
         case "Gaming": .init(short: "Gaming", color: .indigo, symbol: "gamecontroller.fill", order: 19)
@@ -207,13 +209,18 @@ struct VentureStyle: Sendable {
 /// Colors the user can pick per venture (Settings), saved in the App Group
 /// so the widget uses them too.
 enum VentureColors {
-    /// Credaxe's own brand gold (client/src/index.css: --color-primary #735C00).
+    /// Credaxe's own brand (client/src/index.css): charcoal logo #1C1B1B,
+    /// yellow highlight #FACC15, olive gold #735C00.
+    static let credaxeCharcoal = Color.hex(0x2A2928)
+    static let credaxeYellow = Color.hex(0xFACC15)
     static let credaxeGold = Color.hex(0x8A6D00)
+    /// Vishramo's own brand bronze-gold (apps/web/src/index.css: --primary hsl(34 82% 38%) = #B06A11).
+    static let vishramoBronze = Color.hex(0xB06A11)
 
     static let palette: [(name: String, color: Color)] = [
         ("Purple", .purple), ("Indigo", .indigo), ("Blue", .blue), ("Cyan", .cyan), ("Teal", .teal),
-        ("Mint", .mint), ("Green", .green), ("Gold", credaxeGold), ("Yellow", .yellow), ("Orange", .orange),
-        ("Red", .red), ("Pink", .pink), ("Brown", .brown), ("Gray", .gray),
+        ("Mint", .mint), ("Green", .green), ("Bronze", vishramoBronze), ("Gold", credaxeGold), ("Yellow", .yellow), ("Orange", .orange),
+        ("Red", .red), ("Pink", .pink), ("Brown", .brown), ("Gray", .gray), ("Charcoal", credaxeCharcoal),
     ]
 
     private static let key = "ventureColors"

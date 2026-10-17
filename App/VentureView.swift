@@ -53,6 +53,7 @@ struct VentureView: View {
             HStack(spacing: 14) {
                 Image(systemName: style.symbol)
                     .font(.title2.weight(.semibold))
+                    .foregroundStyle(style.symbolColor)
                     .frame(width: 52, height: 52)
                     .background(.white.opacity(0.22), in: .rect(cornerRadius: 14, style: .continuous))
                 VStack(alignment: .leading, spacing: 2) {
@@ -89,7 +90,7 @@ struct VentureView: View {
         .background(alignment: .topTrailing) {
             Image(systemName: style.symbol)
                 .font(.system(size: 92, weight: .bold))
-                .foregroundStyle(.white.opacity(0.13))
+                .foregroundStyle(style.symbolColor.opacity(0.16))
                 .offset(x: 14, y: -12)
         }
         .background(style.fill, in: .rect(cornerRadius: 28, style: .continuous))
@@ -109,7 +110,8 @@ struct VentureView: View {
                             Text(style.short).font(.headline)
                             Text("\(other.items.count) open").font(.caption.weight(.semibold)).opacity(0.85)
                             Spacer()
-                            Image(systemName: style.symbol).font(.title3).opacity(0.6)
+                            Image(systemName: style.symbol).font(.title3)
+                                .foregroundStyle(style.symbolColor.opacity(0.7))
                         }
                         if let top = other.items.first {
                             Text(top.subject.isEmpty ? top.sender : "\(top.sender) · \(top.subject)")

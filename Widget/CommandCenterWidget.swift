@@ -221,6 +221,7 @@ struct CommandCenterWidgetView: View {
                         let style = group.style
                         VStack(alignment: .leading, spacing: 2) {
                             Image(systemName: style.symbol).font(.subheadline.weight(.semibold))
+                                .foregroundStyle(style.symbolColor)
                             Spacer(minLength: 0)
                             Text("\(group.items.count)")
                                 .font(.system(.title2, design: .rounded, weight: .bold))
