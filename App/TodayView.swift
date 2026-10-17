@@ -31,7 +31,7 @@ struct TodayView: View {
                 .padding(.bottom, 40)
             }
             .scrollIndicators(.hidden)
-            .background { SunriseBackground() }
+            .background { AppBackground() }
             .toolbar { toolbar }
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(item: $openItem) { EmailView(item: $0) }
@@ -134,7 +134,7 @@ struct TodayView: View {
                 Spacer(minLength: 0)
             }
             .padding(18)
-            .glassEffect(.regular, in: .rect(cornerRadius: 28))
+            .card(radius: 28)
             .padding(.horizontal, 16)
         }
     }
@@ -142,7 +142,7 @@ struct TodayView: View {
     private func peekCard(depth: Int) -> some View {
         RoundedRectangle(cornerRadius: 28, style: .continuous)
             .fill(.clear)
-            .glassEffect(.regular, in: .rect(cornerRadius: 28))
+            .card(radius: 28)
             .opacity(depth == 1 ? 0.9 : 0.55)
             .padding(.horizontal, CGFloat(depth) * 13)
             .offset(y: CGFloat(depth) * 12)
@@ -191,7 +191,8 @@ struct TodayView: View {
                         .contextMenu { menu(for: item) }
                 }
             }
-            .glassEffect(.regular, in: .rect(cornerRadius: 26))
+            .padding(.vertical, 4)
+            .card(radius: 26)
             .padding(.horizontal, 16)
         }
         .animation(.default, value: board.rest.map(\.id))
@@ -274,7 +275,7 @@ struct TodayView: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassEffect(.regular, in: .rect(cornerRadius: 28))
+        .card(radius: 28)
         .padding(.horizontal, 16)
     }
 
@@ -287,6 +288,7 @@ struct TodayView: View {
 
 struct ItemRow: View {
     let item: Item
+    var showBadge = true
     var selecting = false
     var selected = false
     var snoozed = false
@@ -300,7 +302,7 @@ struct ItemRow: View {
                     .foregroundStyle(selected ? Color.ink : Color.secondary)
                     .transition(.move(edge: .leading).combined(with: .opacity))
             }
-            SenderAvatar(item: item, size: 40)
+            SenderAvatar(item: item, size: 40, showBadge: showBadge)
             HStack(spacing: 8) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.sender)
@@ -327,6 +329,7 @@ struct ItemRow: View {
                 }
             }
             .padding(.vertical, 11)
+            .frame(minHeight: 64)
             .overlay(alignment: .bottom) {
                 if showDivider { Divider() }
             }
@@ -358,12 +361,11 @@ struct VentureCard: View {
         .background(alignment: .bottomTrailing) {
             Image(systemName: style.symbol)
                 .font(.system(size: 64, weight: .bold))
-                .foregroundStyle(.white.opacity(0.2))
+                .foregroundStyle(.white.opacity(0.16))
                 .offset(x: 10, y: 12)
         }
-        .background(style.fill, in: .rect(cornerRadius: 20))
-        .clipShape(.rect(cornerRadius: 20))
-        .shadow(color: style.color.opacity(0.3), radius: 10, y: 6)
+        .background(style.fill, in: .rect(cornerRadius: 20, style: .continuous))
+        .clipShape(.rect(cornerRadius: 20, style: .continuous))
     }
 }
 
@@ -386,7 +388,7 @@ struct PowerCard: View {
             Spacer(minLength: 0)
         }
         .padding(16)
-        .glassEffect(.regular, in: .rect(cornerRadius: 24))
+        .card(radius: 24)
         .padding(.horizontal, 16)
     }
 

@@ -42,6 +42,11 @@ enum DemoData {
                  amount: nil, due: nil, trial: false, link: link("a10"), domain: "greenhouse.io", created: ago(100)),
             Item(id: "d11", title: "Priya: Diwali dinner plans", type: "todo", venture: "Family/General",
                  amount: nil, due: nil, trial: false, link: link("a11"), domain: nil, created: ago(120)),
+            Item(id: "d12", title: "Reminder: Your Walgreens Photo order is ready", type: "todo", venture: "Family/General",
+                 amount: nil, due: nil, trial: false, link: link("a12"), domain: "walgreens.com", created: ago(200),
+                 source: "Walgreens Photo | <family@example.com>"),
+            Item(id: "d13", title: "Get Wi-Fi done for 7-Eleven", type: "todo", venture: "7-Eleven",
+                 amount: nil, due: nil, trial: false, link: nil, domain: nil, created: ago(2400), source: "claude"),
         ]
     }
 }

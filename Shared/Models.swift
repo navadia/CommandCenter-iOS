@@ -13,6 +13,7 @@ struct Item: Identifiable, Codable, Hashable, Sendable {
     let link: String?
     var domain: String? = nil     // sender's site, from the parser's Fingerprint ("geico.com|…")
     var created: String? = nil    // Notion created_time (ISO 8601)
+    var source: String? = nil     // parser's "Sender name | destination"
 
     var isPower: Bool { title.unicodeScalars.first == "\u{26A1}" }
     /// The parser's own bookkeeping row ("⚙️ Digest sent …"), never shown.
@@ -28,11 +29,33 @@ struct Item: Identifiable, Codable, Hashable, Sendable {
 
     private var parts: (sender: String, subject: String) {
         let t = cleanTitle
+        let known = sourceName
         if let r = t.range(of: ": ") {
-            let s = String(t[..<r.lowerBound]).trimmingCharacters(in: .whitespaces)
-            if !s.isEmpty, s.count <= 40 { return (s, String(t[r.upperBound...])) }
+            let prefix = String(t[..<r.lowerBound]).trimmingCharacters(in: .whitespaces)
+            if !prefix.isEmpty, prefix.count <= 40, known == nil || Item.sameSender(prefix, known!) {
+                return (prefix, String(t[r.upperBound...]))
+            }
         }
+        if let known { return (known, t) }      // e.g. "Reminder: …" from Walgreens Photo
         return (t, "")
+    }
+
+    /// The sender name the parser saved in Source ("Walgreens Photo | to"),
+    /// unless the row was added by hand.
+    private var sourceName: String? {
+        guard let source else { return nil }
+        var name = (source.components(separatedBy: " | ").first ?? "").trimmingCharacters(in: .whitespaces)
+        name = Item.replace(name, #" - \S+ at \S+$"#, "")        // SimpleLogin "Name - x at y"
+        let lower = name.lowercased()
+        if name.isEmpty || ["claude", "manual", "whatsapp", "quickadd", "fyi"].contains(lower) { return nil }
+        if name == lower, let first = name.first { name = first.uppercased() + name.dropFirst() }
+        return name
+    }
+
+    private static func sameSender(_ a: String, _ b: String) -> Bool {
+        let x = a.lowercased(), y = b.lowercased()
+        return x.contains(y) || y.contains(x)
+            || x.split(separator: " ").first == y.split(separator: " ").first
     }
 
     var daysUntilDue: Int? {
@@ -135,7 +158,7 @@ struct Item: Identifiable, Codable, Hashable, Sendable {
         return out
     }
 
-    private static func replace(_ s: String, _ pattern: String, _ template: String) -> String {
+    static func replace(_ s: String, _ pattern: String, _ template: String) -> String {
         guard let re = try? NSRegularExpression(pattern: pattern) else { return s }
         return re.stringByReplacingMatches(in: s, range: NSRange(s.startIndex..., in: s), withTemplate: template)
     }
@@ -152,24 +175,24 @@ struct VentureStyle: Sendable {
 
     static func of(_ venture: String) -> VentureStyle {
         switch venture {
-        case "Vishramo", "HotelOS": .init(short: "Vishramo", color: .hex(0x8E44AD), symbol: "bed.double.fill", order: 0)
-        case "Credaxe": .init(short: "Credaxe", color: .hex(0x1E40AF), symbol: "chart.line.uptrend.xyaxis", order: 1)
-        case "7-Eleven": .init(short: "7-Eleven", color: .hex(0x0F766E), symbol: "storefront.fill", order: 2)
-        case "Job (hired)": .init(short: "Job", color: .hex(0x7C5A3A), symbol: "briefcase.fill", order: 3)
-        case "Banking": .init(short: "Banking", color: .hex(0x166534), symbol: "building.columns.fill", order: 4)
-        case "Personal": .init(short: "Personal", color: .hex(0x5856D6), symbol: "person.fill", order: 10)
-        case "Shared/Household": .init(short: "Household", color: .hex(0x248A3D), symbol: "house.fill", order: 11)
-        case "Family/General": .init(short: "Family", color: .hex(0xBE185D), symbol: "figure.2.and.child.holdinghands", order: 12)
-        case "Travel": .init(short: "Travel", color: .hex(0x0277B5), symbol: "airplane", order: 13)
-        case "Job Applications": .init(short: "Jobs", color: .hex(0x7C5A3A), symbol: "briefcase.fill", order: 14)
-        case "Shopping": .init(short: "Shopping", color: .hex(0xC2410C), symbol: "bag.fill", order: 15)
-        case "Food": .init(short: "Food", color: .hex(0xA16207), symbol: "fork.knife", order: 16)
-        case "Pseudo": .init(short: "Pseudo", color: .hex(0x4B5563), symbol: "eye.slash.fill", order: 17)
-        case "Social": .init(short: "Social", color: .hex(0x0E7490), symbol: "bubble.left.and.bubble.right.fill", order: 18)
-        case "Gaming": .init(short: "Gaming", color: .hex(0x4338CA), symbol: "gamecontroller.fill", order: 19)
-        case "Streaming": .init(short: "Streaming", color: .hex(0xB91C1C), symbol: "play.tv.fill", order: 20)
-        case "Services": .init(short: "Services", color: .hex(0x64748B), symbol: "gearshape.fill", order: 21)
-        default: .init(short: venture, color: .hex(0x64748B), symbol: "tray.fill", order: 30)
+        case "Vishramo", "HotelOS": .init(short: "Vishramo", color: .purple, symbol: "bed.double.fill", order: 0)
+        case "Credaxe": .init(short: "Credaxe", color: .blue, symbol: "chart.line.uptrend.xyaxis", order: 1)
+        case "7-Eleven": .init(short: "7-Eleven", color: .teal, symbol: "storefront.fill", order: 2)
+        case "Job (hired)": .init(short: "Job", color: .brown, symbol: "briefcase.fill", order: 3)
+        case "Banking": .init(short: "Banking", color: .mint, symbol: "building.columns.fill", order: 4)
+        case "Personal": .init(short: "Personal", color: .indigo, symbol: "person.fill", order: 10)
+        case "Shared/Household": .init(short: "Household", color: .green, symbol: "house.fill", order: 11)
+        case "Family/General": .init(short: "Family", color: .pink, symbol: "figure.2.and.child.holdinghands", order: 12)
+        case "Travel": .init(short: "Travel", color: .cyan, symbol: "airplane", order: 13)
+        case "Job Applications": .init(short: "Jobs", color: .brown, symbol: "briefcase.fill", order: 14)
+        case "Shopping": .init(short: "Shopping", color: .orange, symbol: "bag.fill", order: 15)
+        case "Food": .init(short: "Food", color: .yellow, symbol: "fork.knife", order: 16)
+        case "Pseudo": .init(short: "Pseudo", color: .gray, symbol: "eye.slash.fill", order: 17)
+        case "Social": .init(short: "Social", color: .red, symbol: "bubble.left.and.bubble.right.fill", order: 18)
+        case "Gaming": .init(short: "Gaming", color: .indigo, symbol: "gamecontroller.fill", order: 19)
+        case "Streaming": .init(short: "Streaming", color: .red, symbol: "play.tv.fill", order: 20)
+        case "Services": .init(short: "Services", color: .gray, symbol: "gearshape.fill", order: 21)
+        default: .init(short: venture, color: .gray, symbol: "tray.fill", order: 30)
         }
     }
 }

@@ -109,7 +109,7 @@ struct CommandCenterWidgetView: View {
                 }
             }
         }
-        .containerBackground(for: .widget) { WidgetSunrise() }
+        .containerBackground(for: .widget) { Color(uiColor: .systemBackground) }
     }
 
     // MARK: Header
@@ -151,7 +151,7 @@ struct CommandCenterWidgetView: View {
 
     private func topPanel(_ item: Item) -> some View {
         HStack(spacing: 10) {
-            SenderAvatar(item: item, size: 38)
+            SenderAvatar(item: item, size: 38, ring: Color(uiColor: .secondarySystemBackground))
             VStack(alignment: .leading, spacing: 1) {
                 Text(item.amountText.map { "\(item.sender) · \($0)" } ?? item.sender)
                     .font(.subheadline.weight(.bold))
@@ -173,12 +173,12 @@ struct CommandCenterWidgetView: View {
             .accessibilityLabel("Mark \(item.sender) done")
         }
         .padding(10)
-        .background(.background.opacity(0.55), in: .rect(cornerRadius: 18))
+        .background(Color(uiColor: .secondarySystemBackground), in: .rect(cornerRadius: 18, style: .continuous))
     }
 
     private func row(_ item: Item) -> some View {
         HStack(spacing: 9) {
-            SenderAvatar(item: item, size: 26)
+            SenderAvatar(item: item, size: 26, ring: Color(uiColor: .systemBackground))
             Text("\(Text(item.sender).fontWeight(.semibold)) \(Text(item.subject).foregroundStyle(.secondary))")
                 .font(.subheadline)
                 .lineLimit(1)
@@ -245,7 +245,7 @@ struct CommandCenterWidgetView: View {
         if let item = top ?? board.urgentFirst.first {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 7) {
-                    SenderAvatar(item: item, size: 32)
+                    SenderAvatar(item: item, size: 32, ring: Color(uiColor: .systemBackground))
                     Text(item.whenText)
                         .font(.caption.weight(.bold))
                         .foregroundStyle(item.isUrgent ? Color.red : Color.secondary)
