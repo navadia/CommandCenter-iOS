@@ -59,7 +59,7 @@ struct VentureBadge: View {
             .overlay {
                 Image(systemName: style.symbol)
                     .font(.system(size: size * 0.52, weight: .semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(style.symbolColor)
             }
             .overlay {
                 if let ring {

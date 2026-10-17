@@ -361,7 +361,7 @@ struct VentureCard: View {
         .background(alignment: .bottomTrailing) {
             Image(systemName: style.symbol)
                 .font(.system(size: 64, weight: .bold))
-                .foregroundStyle(.white.opacity(0.16))
+                .foregroundStyle(style.symbolColor.opacity(0.22))
                 .offset(x: 10, y: 12)
         }
         .background(style.fill, in: .rect(cornerRadius: 20, style: .continuous))
