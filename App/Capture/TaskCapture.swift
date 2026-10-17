@@ -148,8 +148,21 @@ enum TaskReader {
     static func date(in text: String) -> Date? {
         guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue) else { return nil }
         let range = NSRange(text.startIndex..., in: text)
-        let start = Calendar.current.startOfDay(for: .now)
-        return detector.matches(in: text, range: range).compactMap(\.date).first { $0 >= start }
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: .now)
+        for match in detector.matches(in: text, range: range) {
+            guard var date = match.date, let r = Range(match.range, in: text) else { continue }
+            let words = text[r]
+            // "1,284" or "7:58" alone aren't due dates.
+            guard words.contains(where: \.isLetter) || words.contains("/") else { continue }
+            // "Wednesday" can come back as last Wednesday: move it to the next one.
+            while date < start, words.lowercased().contains("day"),
+                  let next = calendar.date(byAdding: .day, value: 7, to: date) {
+                date = next
+            }
+            if date >= start { return calendar.startOfDay(for: date) }
+        }
+        return nil
     }
 
     private static func firstSentence(_ text: String) -> String {
