@@ -11,8 +11,9 @@ final class ItemStore {
     var errorMessage: String?
     var hasToken = TokenStore.load() != nil
     var hasGmail = GmailCredentials.load() != nil
+    private(set) var snoozed = SnoozeStore.activeIDs()
 
-    var board: Board { Board(items) }
+    var board: Board { Board(items, snoozed: snoozed) }
 
     func refresh() async {
         guard let token = TokenStore.load() else {
@@ -28,7 +29,14 @@ final class ItemStore {
             lastUpdated = .now
             errorMessage = nil
             SharedStore.saveSnapshot(fresh)
+            snoozed = SnoozeStore.activeIDs()
             WidgetCenter.shared.reloadAllTimelines()
+            let domains = fresh.compactMap(\.domain)
+            Task {
+                await SenderIcons.prefetch(domains)
+                self.items = self.items      // redraw with any new icons
+                WidgetCenter.shared.reloadAllTimelines()
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -52,6 +60,19 @@ final class ItemStore {
             SharedStore.saveSnapshot(items)
             errorMessage = "\(failed.count) item\(failed.count == 1 ? "" : "s") couldn't be marked done. Try again."
         }
+    }
+
+    /// "Later": hide from the stack and Focus until tomorrow morning.
+    func snooze(_ id: String) {
+        SnoozeStore.snooze(id)
+        snoozed = SnoozeStore.activeIDs()
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    func unsnooze(_ id: String) {
+        SnoozeStore.unsnooze(id)
+        snoozed = SnoozeStore.activeIDs()
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     func saveToken(_ token: String) async -> String {

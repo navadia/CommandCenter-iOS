@@ -33,8 +33,9 @@ jobs:
 
       - name: Test the email parser
         run: |
-          swiftc App/Mail/EmailMessage.swift Tests/MailCheck/main.swift -o mailcheck
-          ./mailcheck
+          set -o pipefail
+          swiftc App/Mail/EmailMessage.swift Tests/MailCheck/main.swift -o mailcheck 2>&1 | tee build.log
+          ./mailcheck 2>&1 | tee -a build.log
 
       - name: Install tools
         run: brew install xcodegen ldid

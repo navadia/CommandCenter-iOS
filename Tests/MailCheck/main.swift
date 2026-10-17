@@ -118,5 +118,16 @@ Content-Type: text/html; charset=utf-8
 """)
 expect(m5.html?.contains("Inner receipt") == true, "message/rfc822 body")
 
+// 6. card previews: plain text preferred; HTML stripped of styles, tags, links and entities
+expect(m1.previewText == "Pay $143 by Oct 20 — thanks", "preview from text part -> \(m1.previewText)")
+expect(m2.previewText == "Café réservé", "preview from html -> \(m2.previewText)")
+let m6 = msg("""
+Subject: Html only
+Content-Type: text/html; charset=utf-8
+
+<html><head><style>p{color:red}</style></head><body><p>Hi&nbsp;Parth,</p><p>Your bill of &#36;167 is ready &amp; due Oct 24.</p><a href="https://x.example/track">https://x.example/track</a></body></html>
+""")
+expect(m6.previewText == "Hi Parth, Your bill of $167 is ready & due Oct 24.", "html preview -> \(m6.previewText)")
+
 print(failures == 0 ? "\nAll email parser checks passed." : "\n\(failures) check(s) failed.")
 exit(failures == 0 ? 0 : 1)
