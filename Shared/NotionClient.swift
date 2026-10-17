@@ -58,6 +58,23 @@ struct NotionClient: Sendable {
         return items
     }
 
+    /// A new open row, added by hand (Add sheet, Action button, Back Tap).
+    func create(title: String, type: String, venture: String, amount: Double?, due: String?, source: String) async throws -> String {
+        func text(_ s: String) -> [String: Any] { ["rich_text": [["text": ["content": String(s.prefix(1_900))]]]] }
+        var props: [String: Any] = [
+            "Title": ["title": [["text": ["content": String(title.prefix(200))]]]],
+            "Type": ["select": ["name": type]],
+            "Venture": ["select": ["name": venture]],
+            "Status": ["select": ["name": "open"]],
+            "Source": text(source),
+        ]
+        if let amount { props["Amount"] = ["number": amount] }
+        if let due { props["Due"] = ["date": ["start": due]] }
+        let json = try await send(request("pages", method: "POST",
+                                          body: ["parent": ["database_id": Self.databaseID], "properties": props]))
+        return json["id"] as? String ?? ""
+    }
+
     func markDone(_ id: String) async throws {
         let body: [String: Any] = ["properties": ["Status": ["select": ["name": "done"]]]]
         _ = try await send(request("pages/\(id)", method: "PATCH", body: body))

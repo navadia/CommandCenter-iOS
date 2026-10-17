@@ -51,6 +51,23 @@ final class ItemStore {
         }
     }
 
+    /// Saves a task from the Add sheet, then shows it.
+    func add(_ draft: TaskDraft, kind: CaptureKind) async throws {
+        let due = draft.due.map { Item.dayFormatter.string(from: $0) }
+        if DemoData.isOn {
+            items.append(Item(id: UUID().uuidString, title: draft.notionTitle, type: draft.type, venture: draft.venture,
+                              amount: draft.amount, due: due, trial: false, link: nil))
+            return
+        }
+        guard let token = TokenStore.load() else {
+            throw NotionClient.NotionError.http(401, "No Notion token")
+        }
+        _ = try await NotionClient(token: token).create(
+            title: draft.notionTitle, type: draft.type, venture: draft.venture,
+            amount: draft.amount, due: due, source: kind.rawValue)
+        await refresh()
+    }
+
     /// Optimistic: rows disappear at once; any that fail come back with an error.
     func markDone(_ ids: Set<String>) async {
         if DemoData.isOn { items.removeAll { ids.contains($0.id) }; return }

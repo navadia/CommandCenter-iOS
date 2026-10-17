@@ -48,7 +48,7 @@ struct Item: Identifiable, Codable, Hashable, Sendable {
         var name = (source.components(separatedBy: " | ").first ?? "").trimmingCharacters(in: .whitespaces)
         name = Item.replace(name, #" - \S+ at \S+$"#, "")        // SimpleLogin "Name - x at y"
         let lower = name.lowercased()
-        if name.isEmpty || ["claude", "manual", "whatsapp", "quickadd", "fyi"].contains(lower) { return nil }
+        if name.isEmpty || ["claude", "manual", "whatsapp", "quickadd", "fyi", "voice", "screenshot"].contains(lower) { return nil }
         if name == lower, let first = name.first { name = first.uppercased() + name.dropFirst() }
         return name
     }

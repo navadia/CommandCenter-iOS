@@ -62,6 +62,7 @@ jobs:
           shot settings-light light -demoSettings
           shot venture-light light -demoVenture Credaxe
           shot venture-dark dark -demoVenture Vishramo
+          shot add-light light -demoAdd "McLane invoice #4471 for \$1,284 is due Wednesday. Pay it through the vendor portal."
       - name: Publish screenshots
         if: always()
         env:
