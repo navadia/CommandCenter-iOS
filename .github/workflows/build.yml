@@ -69,6 +69,14 @@ jobs:
       - name: Write the SideStore source (apps.json)
         run: |
           BUILD=$(sed -nE 's/.*CURRENT_PROJECT_VERSION: "([0-9]+)".*/\1/p' project.yml)
+          # SideStore refuses an update whose build number differs from the source's.
+          APP=build/Build/Products/Release-iphoneos/CommandCenter.app
+          for plist in "$APP/Info.plist" "$APP/PlugIns/CommandCenterWidget.appex/Info.plist"; do
+            V=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$plist")
+            S=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$plist")
+            echo "$plist: $S ($V)"
+            test "$V" = "$BUILD" && test "$S" = "1.0.$BUILD"
+          done
           SIZE=$(stat -f%z CommandCenter.ipa)
           NOTES=$(git log -1 --format=%s)
           BUILD="$BUILD" SIZE="$SIZE" NOTES="$NOTES" python3 scripts/source.py > apps.json
