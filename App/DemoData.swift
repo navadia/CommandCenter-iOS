@@ -54,14 +54,15 @@ enum DemoData {
     }
 
     static var categories: [Category] {
+        // Sample rules only: example addresses, never real ones (this repo is public).
         let rows: [(String, [String])] = [
-            ("Vishramo", ["to: vishramo", "to: hotel", "from: vishramo"]),
+            ("Vishramo", ["to: hotel", "from: vishramo"]),
             ("Credaxe", ["to: credaxe"]),
             ("7-Eleven", ["to: store", "from: mclane"]),
             ("Job (hired)", ["to: work"]),
             ("Banking", ["to: bank"]),
-            ("Personal", ["from: geico.com", "from: claimpix"]),
-            ("Shared/Household", ["to: home", "to: home"]),
+            ("Personal", ["from: insurance.com"]),
+            ("Shared/Household", ["to: home"]),
             ("Family/General", ["to: family"]),
             ("Travel", ["to: travel"]),
             ("Job Applications", ["to: jobs"]),

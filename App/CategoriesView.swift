@@ -254,7 +254,7 @@ struct CategoryEditor: View {
     private func placeholder(_ kind: Category.Rule.Kind) -> String {
         switch kind {
         case .from: "mclane.com"
-        case .to: "store"
+        case .to: "store@example.com"
         case .subject: "invoice"
         }
     }

@@ -19,7 +19,7 @@ struct Category: Codable, Identifiable, Hashable, Sendable {
 
         var line: String { "\(kind.rawValue): \(needle)" }
 
-        /// "to: store" -> Rule; nil for anything else.
+        /// "to: store@example.com" -> Rule; nil for anything else.
         init?(line: String) {
             let parts = line.split(separator: ":", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
             guard parts.count == 2, let kind = Kind(rawValue: parts[0].lowercased()), !parts[1].isEmpty else { return nil }
