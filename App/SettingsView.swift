@@ -11,7 +11,7 @@ struct SettingsView: View {
     @State private var gmailAddress = GmailCredentials.savedAddress
     @State private var gmailPassword = ""
     @State private var check: CheckState = .idle
-    @State private var editingColor: String?
+    @State private var showCategories = false
     @AppStorage(GlassPreference.key, store: SharedStore.defaults) private var frost = GlassPreference.standard
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
@@ -87,13 +87,17 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    ForEach(colorVentures, id: \.self) { venture in
-                        VentureColorRow(venture: venture, editing: $editingColor)
+                    NavigationLink {
+                        CategoriesView()
+                    } label: {
+                        LabeledContent {
+                            Text("\(CategoryStore.all.count)")
+                        } label: {
+                            Label("Categories", systemImage: "square.grid.2x2")
+                        }
                     }
-                } header: {
-                    Text("Venture Colors")
                 } footer: {
-                    Text("Tap a venture to pick its color. It changes everywhere: the app, the badges and the widget. Tap the selected color again to go back to the standard one.")
+                    Text("Add, rename or delete categories, pick their icon and color, and choose which emails go to each.")
                 }
 
                 Section {
@@ -138,8 +142,9 @@ struct SettingsView: View {
                     LabeledContent("Shared storage", value: SharedStore.isGroupWorking ? "Working" : "Unavailable")
                 }
             }
+            .navigationDestination(isPresented: $showCategories) { CategoriesView() }
             .onAppear {
-                if ProcessInfo.processInfo.arguments.contains("-demoSettings"), editingColor == nil { editingColor = "Credaxe" }
+                if DemoData.argument(after: "-demoCategory") != nil { showCategories = true }
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
@@ -191,12 +196,6 @@ struct SettingsView: View {
         .accessibilityHidden(true)
     }
 
-    private var colorVentures: [String] {
-        let standard = ["Vishramo", "Credaxe", "7-Eleven", "Personal", "Shared/Household", "Family/General",
-                        "Travel", "Job Applications", "Pseudo"]
-        let present = store.board.ventures.map(\.venture).filter { !standard.contains($0) && $0 != "HotelOS" }
-        return standard + present
-    }
 
     private var hasChanges: Bool {
         !token.trimmed.isEmpty || !gmailPassword.trimmed.isEmpty
@@ -238,67 +237,4 @@ struct SettingsView: View {
 
 private extension String {
     var trimmed: String { trimmingCharacters(in: .whitespacesAndNewlines) }
-}
-
-/// One venture in Settings › Venture Colors: its badge and current color,
-/// and the swatches when it's the one being edited.
-private struct VentureColorRow: View {
-    let venture: String
-    @Binding var editing: String?
-    @Environment(ItemStore.self) private var store
-
-    var body: some View {
-        let style = VentureStyle.of(venture)
-        let picked = VentureColors.pickedName(for: style.short)
-        let isOpen = editing == venture
-        VStack(alignment: .leading, spacing: 10) {
-            Button {
-                withAnimation(.snappy) { editing = isOpen ? nil : venture }
-            } label: {
-                HStack(spacing: 12) {
-                    VentureBadge(venture: venture, size: 30, ring: nil)
-                    Text(style.short).foregroundStyle(Color.primary)
-                    Spacer()
-                    Text(picked ?? "Standard").font(.subheadline).foregroundStyle(.secondary)
-                    Image(systemName: "chevron.right")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.tertiary)
-                        .rotationEffect(.degrees(isOpen ? 90 : 0))
-                }
-                .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint(isOpen ? "Hides the colors" : "Shows the colors")
-            if isOpen {
-                ScrollView(.horizontal) {
-                HStack(spacing: 10) {
-                    ForEach(VentureColors.palette, id: \.name) { option in
-                        let isOn = picked == option.name
-                        Button {
-                            VentureColors.set(isOn ? nil : option.name, for: style.short)
-                            store.ventureColorsChanged()
-                        } label: {
-                            Circle()
-                                .fill(option.color)
-                                .frame(width: 28, height: 28)
-                                .overlay {
-                                    if isOn {
-                                        Image(systemName: "checkmark")
-                                            .font(.caption.weight(.bold))
-                                            .foregroundStyle(.white)
-                                    }
-                                }
-                                .padding(3)
-                                .overlay(Circle().strokeBorder(isOn ? option.color : .clear, lineWidth: 2))
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("\(option.name)\(isOn ? ", selected" : "")")
-                    }
-                }
-            }
-            .scrollIndicators(.hidden)
-            }
-        }
-        .padding(.vertical, 4)
-    }
 }

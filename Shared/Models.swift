@@ -16,6 +16,9 @@ struct Item: Identifiable, Codable, Hashable, Sendable {
     var created: String? = nil    // Notion created_time (ISO 8601)
     var source: String? = nil     // parser's "Sender name | destination"
 
+    /// An email opened from a notification that isn't a Command Center row (FYI mail).
+    var isMailOnly: Bool { id.hasPrefix("mail-") }
+
     var isPower: Bool { title.unicodeScalars.first == "\u{26A1}" }
     /// The parser's own bookkeeping row ("⚙️ Digest sent …"), never shown.
     var isInternal: Bool { title.unicodeScalars.first == "\u{2699}" }
@@ -177,7 +180,15 @@ struct VentureStyle: Sendable {
 
     /// The venture's style, with the color the user picked in Settings if any.
     static func of(_ venture: String) -> VentureStyle {
-        let base = standard(venture)
+        var base = standard(venture)
+        // The Categories table (edited in Settings) sets icon, color and order.
+        if let cat = CategoryStore.find(venture) {
+            let picked = VentureColors.palette.first { $0.name == cat.color }?.color
+            let keepsBrand = picked == nil || cat.color == VentureColors.standardName(venture)
+            base = VentureStyle(short: base.short, color: picked ?? base.color,
+                                symbol: cat.icon.isEmpty ? base.symbol : cat.icon, order: cat.order,
+                                symbolColor: keepsBrand ? base.symbolColor : .white)
+        }
         guard let picked = VentureColors.picked(for: base.short) else { return base }
         return VentureStyle(short: base.short, color: picked, symbol: base.symbol, order: base.order)   // custom color, white symbol
     }
@@ -225,6 +236,26 @@ enum VentureColors {
     ]
 
     private static let key = "ventureColors"
+
+    /// The palette name of each venture's standard color (prefills the category editor).
+    static func standardName(_ venture: String) -> String {
+        switch venture {
+        case "Vishramo", "HotelOS": "Bronze"
+        case "Credaxe": "Charcoal"
+        case "7-Eleven", "Streaming": "Red"
+        case "Job (hired)": "Brown"
+        case "Banking": "Mint"
+        case "Personal", "Gaming": "Indigo"
+        case "Shared/Household": "Green"
+        case "Family/General": "Purple"
+        case "Travel": "Blue"
+        case "Job Applications": "Teal"
+        case "Shopping": "Yellow"
+        case "Food": "Orange"
+        case "Social": "Pink"
+        default: "Gray"
+        }
+    }
 
     static func pickedName(for short: String) -> String? {
         // Reading the version makes every view that shows a venture color

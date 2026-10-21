@@ -49,4 +49,24 @@ enum DemoData {
                  amount: nil, due: nil, trial: false, link: nil, domain: nil, created: ago(2400), source: "claude"),
         ]
     }
+
+    static var categories: [Category] {
+        let rows: [(String, [String])] = [
+            ("Vishramo", ["to: vishramo", "to: hotel", "from: vishramo"]),
+            ("Credaxe", ["to: credaxe"]),
+            ("7-Eleven", ["to: store", "from: mclane"]),
+            ("Job (hired)", ["to: work"]),
+            ("Banking", ["to: bank"]),
+            ("Personal", ["from: geico.com", "from: claimpix"]),
+            ("Shared/Household", ["to: home", "to: home"]),
+            ("Family/General", ["to: family"]),
+            ("Travel", ["to: travel"]),
+            ("Job Applications", ["to: jobs"]),
+            ("Pseudo", ["to: signups"]),
+        ]
+        return rows.enumerated().map { i, row in
+            Category(id: "c\(i)", name: row.0, rules: row.1.compactMap { Category.Rule(line: $0) }, order: i,
+                     about: row.0 == "7-Eleven" ? "The 7-Eleven store I run: McLane, vendors, staff, store bills." : "")
+        }
+    }
 }

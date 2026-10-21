@@ -17,6 +17,7 @@ final class ItemStore {
 
     func refresh() async {
         if DemoData.isOn {
+            CategoryStore.save(DemoData.categories)
             items = DemoData.items
             hasToken = true
             lastUpdated = .now
@@ -40,6 +41,7 @@ final class ItemStore {
             SharedStore.saveSnapshot(fresh)
             snoozed = SnoozeStore.activeIDs()
             WidgetCenter.shared.reloadAllTimelines()
+            Task { await self.loadCategories() }
             let domains = fresh.compactMap(\.domain)
             Task {
                 await SenderIcons.prefetch(domains)
@@ -132,6 +134,80 @@ final class ItemStore {
         SnoozeStore.unsnooze(id)
         snoozed = SnoozeStore.activeIDs()
         WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    // MARK: Categories
+
+    private(set) var categoriesMissing = false
+    private static let categoriesDBKey = "categoriesDB"
+
+    /// Reads the Categories table into the shared cache (styles, pickers, widget).
+    func loadCategories() async {
+        if DemoData.isOn { CategoryStore.save(DemoData.categories); return }
+        guard let token = TokenStore.load() else { return }
+        let client = NotionClient(token: token)
+        do {
+            guard let db = try await categoriesDB(client) else { categoriesMissing = true; return }
+            categoriesMissing = false
+            CategoryStore.save(try await client.categories(in: db))
+            WidgetCenter.shared.reloadAllTimelines()
+        } catch {
+            // Offline or Notion busy: keep the cached list.
+        }
+    }
+
+    private func categoriesDB(_ client: NotionClient) async throws -> String? {
+        if let cached = SharedStore.defaults.string(forKey: Self.categoriesDBKey) { return cached }
+        let id = try await client.categoriesDatabaseID()
+        if let id { SharedStore.defaults.set(id, forKey: Self.categoriesDBKey) }
+        return id
+    }
+
+    /// Adds or edits a category. A rename moves its open items to the new name.
+    func save(_ category: Category, renamedFrom old: String?) async throws {
+        var list = CategoryStore.all
+        var saved = category
+        if !DemoData.isOn {
+            guard let token = TokenStore.load() else { throw NotionClient.NotionError.http(401, "No Notion token") }
+            let client = NotionClient(token: token)
+            guard let db = try await categoriesDB(client) else {
+                throw NotionClient.NotionError.http(404, "The Categories table isn't there yet. It appears after the next email check.")
+            }
+            saved = try await client.save(category, in: db)
+            if let old, old != category.name {
+                _ = try await client.moveOpenItems(from: old, to: category.name)
+            }
+        } else if saved.id.isEmpty {
+            saved.id = UUID().uuidString
+        }
+        if let old, old != category.name { renameLocally(old, to: category.name) }
+        VentureColors.set(nil, for: VentureStyle.standard(category.name).short)
+        list.removeAll { $0.id == saved.id || $0.name == (old ?? saved.name) }
+        list.append(saved)
+        CategoryStore.save(list)
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    /// Deletes a category after moving its open items to another one.
+    func delete(_ category: Category, movingTo target: String) async throws {
+        if !DemoData.isOn {
+            guard let token = TokenStore.load() else { throw NotionClient.NotionError.http(401, "No Notion token") }
+            let client = NotionClient(token: token)
+            _ = try await client.moveOpenItems(from: category.name, to: target)
+            if !category.id.isEmpty { try await client.archive(pageID: category.id) }
+        }
+        renameLocally(category.name, to: target)
+        CategoryStore.save(CategoryStore.all.filter { $0.id != category.id })
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    private func renameLocally(_ old: String, to new: String) {
+        items = items.map { item in
+            guard item.venture == old else { return item }
+            return Item(id: item.id, title: item.title, type: item.type, venture: new, amount: item.amount, due: item.due,
+                        trial: item.trial, link: item.link, domain: item.domain, created: item.created, source: item.source)
+        }
+        SharedStore.saveSnapshot(items)
     }
 
     /// Redraw everything (and the widget) after a venture color change.

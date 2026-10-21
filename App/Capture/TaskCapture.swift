@@ -22,8 +22,14 @@ struct TaskDraft: Equatable {
         return f.isEmpty ? t : "\(f): \(t)"
     }
 
-    /// The venture names as they are in Notion's Venture column.
-    static let ventures = ["Vishramo", "Credaxe", "7-Eleven", "Job (hired)", "Personal", "Shared/Household",
+    /// The venture names as they are in Notion's Venture column: the Categories
+    /// table when it has been read, else the built-in list.
+    static var ventures: [String] {
+        let names = CategoryStore.all.map(\.name)
+        return names.isEmpty ? builtIn : names
+    }
+
+    static let builtIn = ["Vishramo", "Credaxe", "7-Eleven", "Job (hired)", "Personal", "Shared/Household",
                            "Family/General", "Travel", "Job Applications", "Banking"]
     static let types = ["todo", "money", "travel"]
 }
@@ -67,7 +73,7 @@ enum TaskReader {
         @Guide(description: "money for a bill, invoice, payment, refund, renewal or subscription; travel for a flight, hotel, booking or trip; todo for anything else.",
                .anyOf(TaskDraft.types))
         var type: String
-        @Guide(description: "Which part of Parth's life this belongs to.", .anyOf(TaskDraft.ventures))
+        @Guide(description: "The category name, copied exactly from the list in the instructions.")
         var venture: String
         @Guide(description: "The amount of money in US dollars, or 0 if none is mentioned.")
         var amount: Double
@@ -81,12 +87,8 @@ enum TaskReader {
         let weekday = Date.now.formatted(.dateTime.weekday(.wide))
         let instructions = """
         You turn a note into one task for Parth's to-do list. Today is \(weekday), \(today).
-        Ventures: Vishramo = his hotel software company (AWS, Vercel, servers, hotels, customers). \
-        Credaxe = his other software company. 7-Eleven = the 7-Eleven store he runs (McLane, vendors, \
-        store staff, store bills). Job (hired) = his employer. Job Applications = job hunting, recruiters, \
-        interviews. Shared/Household = home bills and chores shared with his wife (rent, power, internet). \
-        Family/General = family plans and events. Travel = flights and trips. Banking = bank accounts. \
-        Personal = anything else of his own (insurance, health, shopping).
+        Categories (pick one, copy its name exactly):
+        \(categoryGuide)
         Relative dates like "Friday" or "tomorrow" mean the next such day from today.
         """
         let source = kind == .screenshot
@@ -100,7 +102,7 @@ enum TaskReader {
             draft.from = p.from.trimmingCharacters(in: .whitespacesAndNewlines)
             draft.title = p.title.trimmingCharacters(in: .whitespacesAndNewlines)
             draft.type = TaskDraft.types.contains(p.type) ? p.type : "todo"
-            draft.venture = TaskDraft.ventures.contains(p.venture) ? p.venture : "Personal"
+            draft.venture = matchVenture(p.venture)
             draft.amount = p.amount > 0 ? p.amount : nil
             draft.due = Item.dayFormatter.date(from: p.due)
             if draft.title.isEmpty { return nil }
@@ -108,6 +110,37 @@ enum TaskReader {
         } catch {
             return nil      // guardrails, too long, model busy: rules take over
         }
+    }
+
+    /// One line per category: "7-Eleven: the store he runs…".
+    private static var categoryGuide: String {
+        let cats = CategoryStore.all
+        guard !cats.isEmpty else {
+            return """
+            Vishramo = his hotel software company (AWS, Vercel, servers, hotels, customers). \
+            Credaxe = his other software company. 7-Eleven = the 7-Eleven store he runs (McLane, vendors, \
+            store staff, store bills). Job (hired) = his employer. Job Applications = job hunting, recruiters, \
+            interviews. Shared/Household = home bills and chores shared with his wife (rent, power, internet). \
+            Family/General = family plans and events. Travel = flights and trips. Banking = bank accounts. \
+            Personal = anything else of his own (insurance, health, shopping).
+            """
+        }
+        return cats.map { c in
+            let hints = c.rules.filter { $0.kind != .to }.map(\.needle).prefix(4).joined(separator: ", ")
+            var line = "- \(c.name)"
+            if !c.about.isEmpty { line += ": \(c.about)" }
+            if !hints.isEmpty { line += " (mail from or about: \(hints))" }
+            return line
+        }.joined(separator: "\n")
+    }
+
+    /// The model's answer mapped onto a real category name.
+    static func matchVenture(_ answer: String) -> String {
+        let a = answer.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let names = TaskDraft.ventures
+        if let exact = names.first(where: { $0.lowercased() == a }) { return exact }
+        if let close = names.first(where: { !a.isEmpty && ($0.lowercased().contains(a) || a.contains($0.lowercased())) }) { return close }
+        return names.contains("Personal") ? "Personal" : (names.first ?? "Personal")
     }
 
     // MARK: Rules (no Apple Intelligence)
@@ -137,7 +170,11 @@ enum TaskReader {
     ]
 
     private static func keywordVenture(_ lower: String) -> String? {
-        keywords.first { entry in entry.needles.contains { needle in lower.contains(needle) } }?.venture
+        // The categories' own "from" / "subject" rules first (e.g. from: mclane).
+        for c in CategoryStore.all {
+            if c.rules.contains(where: { $0.kind != .to && lower.contains($0.needle.lowercased()) }) { return c.name }
+        }
+        return keywords.first { entry in entry.needles.contains { needle in lower.contains(needle) } }?.venture
     }
 
     static func amount(in text: String) -> Double? {

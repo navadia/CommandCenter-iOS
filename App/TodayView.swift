@@ -62,6 +62,7 @@ struct TodayView: View {
                 }
             }
         }
+        .onOpenURL { url in Task { await open(url) } }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { Task { await store.refresh() } }
         }
@@ -228,6 +229,37 @@ struct TodayView: View {
             Button("Bring Back", systemImage: "sun.max") { store.unsnooze(item.id) }
         } else {
             Button("Later", systemImage: "moon") { store.snooze(item.id) }
+        }
+    }
+
+    /// Links from Bark notifications:
+    ///   commandcenter://today                 Today
+    ///   commandcenter://item/<notion page id> that item's email (or its edit sheet)
+    ///   commandcenter://mail?id=<msg id>&title=…   one email that isn't a row (FYI mail)
+    private func open(_ url: URL) async {
+        guard url.scheme == "commandcenter" else { return }
+        showFocus = false
+        showSettings = false
+        capture.request = nil
+        openVenture = nil
+        openItem = nil
+        switch url.host() {
+        case "item":
+            let wanted = url.lastPathComponent.replacingOccurrences(of: "-", with: "")
+            let match = { store.items.first { $0.id.replacingOccurrences(of: "-", with: "") == wanted } }
+            if match() == nil { await store.refresh() }
+            guard let item = match() else { return }
+            if item.messageID != nil { openItem = item } else { edit(item) }
+        case "mail":
+            let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+            guard let id = query.first(where: { $0.name == "id" })?.value, !id.isEmpty else { return }
+            let title = query.first(where: { $0.name == "title" })?.value ?? "Email"
+            let link = "https://mail.google.com/mail/u/0/#search/rfc822msgid:" +
+                (id.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? id)
+            openItem = Item(id: "mail-\(id)", title: title, type: "todo", venture: "Personal",
+                            amount: nil, due: nil, trial: false, link: link)
+        default:
+            break      // "today": the reset above is all it needs
         }
     }
 

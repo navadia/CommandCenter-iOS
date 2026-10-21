@@ -82,9 +82,11 @@ struct EmailView: View {
 
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
-            Button("Edit", systemImage: "pencil") {
-                CaptureCenter.shared.request = CaptureRequest(input: .edit(item), kind: .typed)
+        if !item.isMailOnly {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Edit", systemImage: "pencil") {
+                    CaptureCenter.shared.request = CaptureRequest(input: .edit(item), kind: .typed)
+                }
             }
         }
         if message?.hasRemoteImages == true {
@@ -95,6 +97,7 @@ struct EmailView: View {
                 }
             }
         }
+        if !item.isMailOnly {
         ToolbarItem(placement: .bottomBar) {
             Button {
                 let id = item.id
@@ -106,6 +109,7 @@ struct EmailView: View {
             }
             .buttonStyle(.glassProminent)
             .tint(.green)
+        }
         }
     }
 

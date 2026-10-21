@@ -10,7 +10,7 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     MARKETING_VERSION: "1.0"
-    CURRENT_PROJECT_VERSION: "20"
+    CURRENT_PROJECT_VERSION: "21"
     TARGETED_DEVICE_FAMILY: "1"
     CODE_SIGNING_ALLOWED: "NO"       # SideStore signs it with your Apple ID
     CODE_SIGNING_REQUIRED: "NO"
@@ -30,6 +30,9 @@ targets:
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         ALTAppGroups: [group.com.navadia.commandcenter]
+        CFBundleURLTypes:
+          - CFBundleURLName: com.navadia.commandcenter
+            CFBundleURLSchemes: [commandcenter]
     entitlements:
       path: App/CommandCenter.entitlements
       properties:
