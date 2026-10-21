@@ -45,6 +45,9 @@ enum DemoData {
             Item(id: "d12", title: "Reminder: Your Walgreens Photo order is ready", type: "todo", venture: "Family/General",
                  amount: nil, due: nil, trial: false, link: link("a12"), domain: "walgreens.com", created: ago(200),
                  source: "Walgreens Photo | <family@example.com>"),
+            Item(id: "p1", title: "\u{26A1} Need 835 kWh in 24d · proj 864", type: "todo", venture: "Shared/Household",
+                 amount: nil, due: day(22), trial: false, link: nil, domain: nil, created: ago(3),
+                 source: #"power {"state":"low","used":195.2,"days":7,"total":31,"left":24,"proj":864,"goal":1000,"target":1030,"need":835,"pace":27.9,"perday":34.8,"bill":215,"rate":22.2,"start":"2026-10-13","end":"2026-11-12"}"#),
             Item(id: "d13", title: "Get Wi-Fi done for 7-Eleven", type: "todo", venture: "7-Eleven",
                  amount: nil, due: nil, trial: false, link: nil, domain: nil, created: ago(2400), source: "claude"),
         ]

@@ -51,7 +51,8 @@ struct Item: Identifiable, Codable, Hashable, Sendable {
         var name = (source.components(separatedBy: " | ").first ?? "").trimmingCharacters(in: .whitespaces)
         name = Item.replace(name, #" - \S+ at \S+$"#, "")        // SimpleLogin "Name - x at y"
         let lower = name.lowercased()
-        if name.isEmpty || ["claude", "manual", "whatsapp", "quickadd", "fyi", "voice", "screenshot"].contains(lower) { return nil }
+        if name.isEmpty || lower.hasPrefix("power")
+            || ["claude", "manual", "whatsapp", "quickadd", "fyi", "voice", "screenshot"].contains(lower) { return nil }
         if name == lower, let first = name.first { name = first.uppercased() + name.dropFirst() }
         return name
     }
@@ -390,4 +391,47 @@ struct Board: Sendable {
 
     /// Widget order: the stack first, then the rest.
     var urgentFirst: [Item] { needYou + rest }
+}
+
+/// The numbers the power check writes on its row ("power {json}" in Source).
+struct PowerData: Decodable, Sendable {
+    let state: String          // low (credit at risk) · high (bill running high) · ok
+    let used: Double
+    let days: Int
+    let left: Int
+    let proj: Int
+    let goal: Int
+    let pace: Double
+    let perday: Double?
+    let bill: Int?
+    let rate: Double?          // cents per kWh, tax in
+    let end: String
+
+    var endText: String {
+        Item.dayFormatter.date(from: end)?.formatted(.dateTime.month(.abbreviated).day()) ?? end
+    }
+
+    var pill: String {
+        switch state {
+        case "low": "$125 credit at risk"
+        case "high": bill.map { "Running high · ~$\($0)" } ?? "Running high"
+        default: "Credit safe"
+        }
+    }
+
+    var tint: Color {
+        switch state {
+        case "low": .amber
+        case "high": .orange
+        default: .green
+        }
+    }
+}
+
+extension Item {
+    var powerData: PowerData? {
+        guard isPower, let source, source.hasPrefix("power "),
+              let data = source.dropFirst(6).data(using: .utf8) else { return nil }
+        return try? JSONDecoder().decode(PowerData.self, from: data)
+    }
 }

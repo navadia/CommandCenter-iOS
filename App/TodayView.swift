@@ -426,34 +426,121 @@ struct VentureCard: View {
     }
 }
 
+/// The electricity row from the power check: one bar from 0 to the goal
+/// (solid = used so far, dashed = where this pace ends, white tick = 1,000 kWh)
+/// and one line saying what to do. Rows written before the check sent its
+/// numbers fall back to the old text.
 struct PowerCard: View {
     let item: Item
 
-    private var isHigh: Bool { item.title.contains("Running high") }
-
     var body: some View {
-        HStack(spacing: 14) {
-            Image(systemName: "bolt.fill")
-                .font(.headline)
-                .foregroundStyle(Color.night)
-                .frame(width: 36, height: 36)
-                .background(Color.amber, in: .circle)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(item.cleanTitle).font(.headline)
-                Text(caption).font(.subheadline).foregroundStyle(.secondary)
-            }
-            Spacer(minLength: 0)
+        Group {
+            if let data = item.powerData { full(data) } else { legacy }
         }
         .padding(16)
         .card(radius: 24)
         .padding(.horizontal, 16)
     }
 
-    private var caption: String {
-        let end = item.due.flatMap { Item.dayFormatter.date(from: String($0.prefix(10))) }
-        let endText = end?.formatted(.dateTime.month(.abbreviated).day()) ?? "soon"
-        return isHigh
-            ? "Cycle ends \(endText) · each kWh over 1,000 costs about 21¢"
-            : "Cycle ends \(endText) · stay above 1,000 kWh for the $125 credit"
+    // MARK: Progress bar
+
+    private func full(_ d: PowerData) -> some View {
+        let tint = d.tint
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 10) {
+                bolt(tint)
+                Text("Electricity").font(.headline)
+                Spacer(minLength: 8)
+                Text(d.pill)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(tint)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 4)
+                    .background(tint.opacity(0.16), in: .capsule)
+            }
+            PowerBar(data: d, tint: tint)
+                .frame(height: 12)
+                .padding(.top, 22)
+                .padding(.bottom, 8)
+            HStack {
+                Text("\(Text("\(Int(d.used.rounded()))").fontWeight(.semibold)) used")
+                Spacer()
+                Text("on pace for \(d.proj.formatted())").foregroundStyle(.secondary)
+                Spacer()
+                Text(d.goal.formatted()).fontWeight(.semibold)
+            }
+            .font(.footnote)
+            .monospacedDigit()
+            footer(d)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .padding(.top, 12)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func footer(_ d: PowerData) -> Text {
+        let ends = "\(d.left) day\(d.left == 1 ? "" : "s") left · ends \(d.endText)"
+        switch d.state {
+        case "low":
+            let perDay = Int((d.perday ?? 0).rounded())
+            return Text("Use about \(Text("\(perDay) kWh a day").fontWeight(.semibold).foregroundStyle(.primary)) (now \(Int(d.pace.rounded()))) · \(ends)")
+        case "high":
+            return Text("Each kWh over 1,000 costs about \(Int((d.rate ?? 22).rounded()))¢ · \(ends)")
+        default:
+            return Text("Above 1,000 at this pace · \(ends)")
+        }
+    }
+
+    private func bolt(_ tint: Color) -> some View {
+        Image(systemName: "bolt.fill")
+            .font(.subheadline.weight(.bold))
+            .foregroundStyle(Color.night)
+            .frame(width: 30, height: 30)
+            .background(tint, in: .circle)
+    }
+
+    // MARK: Before the power check sent numbers
+
+    private var legacy: some View {
+        HStack(spacing: 14) {
+            bolt(.amber)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.cleanTitle).font(.headline)
+                Text("Stay above 1,000 kWh for the $125 credit").font(.subheadline).foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+        }
+    }
+}
+
+/// Solid capsule for what's used, dashes out to the projection, a white tick at the goal.
+private struct PowerBar: View {
+    let data: PowerData
+    let tint: Color
+
+    var body: some View {
+        Canvas { ctx, size in
+            let scale = max(Double(data.goal), Double(data.proj), data.used) * (data.proj > data.goal ? 1.06 : 1.0)
+            let x = { (v: Double) in size.width * min(max(v / scale, 0), 1) }
+            let h = size.height
+            ctx.fill(Path(roundedRect: CGRect(x: 0, y: 0, width: size.width, height: h), cornerRadius: h / 2),
+                     with: .color(Color(uiColor: .tertiarySystemFill)))
+            // Dashes from today to where this pace ends.
+            var dash = x(data.used) + 3
+            let end = x(Double(data.proj))
+            while dash + 4 <= end {
+                ctx.fill(Path(roundedRect: CGRect(x: dash, y: 0, width: 5, height: h), cornerRadius: 1.5),
+                         with: .color(tint.opacity(0.45)))
+                dash += 9
+            }
+            let used = max(x(data.used), h)
+            ctx.fill(Path(roundedRect: CGRect(x: 0, y: 0, width: used, height: h), cornerRadius: h / 2), with: .color(tint))
+            // The 1,000 kWh line.
+            let g = x(Double(data.goal))
+            ctx.fill(Path(roundedRect: CGRect(x: min(g, size.width - 2), y: -6, width: 2, height: h + 12), cornerRadius: 1),
+                     with: .color(.primary))
+        }
+        .accessibilityLabel("\(Int(data.used.rounded())) of \(data.goal) kilowatt hours used, on pace for \(data.proj)")
     }
 }
