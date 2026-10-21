@@ -164,7 +164,7 @@ final class ItemStore {
     }
 
     /// Adds or edits a category. A rename moves its open items to the new name.
-    func save(_ category: Category, renamedFrom old: String?) async throws {
+    func save(_ category: Category, renamedFrom old: String?, keepColorPick: Bool = false) async throws {
         var list = CategoryStore.all
         var saved = category
         if !DemoData.isOn {
@@ -181,11 +181,28 @@ final class ItemStore {
             saved.id = UUID().uuidString
         }
         if let old, old != category.name { renameLocally(old, to: category.name) }
-        VentureColors.set(nil, for: VentureStyle.standard(category.name).short)
+        if !keepColorPick { VentureColors.set(nil, for: VentureStyle.standard(category.name).short) }
         list.removeAll { $0.id == saved.id || $0.name == (old ?? saved.name) }
         list.append(saved)
         CategoryStore.save(list)
         WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    /// "Always send mail from X here": adds the rule to that category and
+    /// removes the same rule from any other category so they can't compete.
+    func alwaysSend(from needle: String, to name: String) async throws {
+        let key = needle.lowercased()
+        for var c in CategoryStore.all {
+            let had = c.rules.contains { $0.kind == .from && $0.needle.lowercased() == key }
+            if c.name == name {
+                guard !had else { continue }
+                c.rules.append(Category.Rule(kind: .from, needle: needle))
+            } else {
+                guard had else { continue }
+                c.rules.removeAll { $0.kind == .from && $0.needle.lowercased() == key }
+            }
+            try await save(c, renamedFrom: nil, keepColorPick: true)
+        }
     }
 
     /// Deletes a category after moving its open items to another one.

@@ -20,6 +20,8 @@ struct AddTaskSheet: View {
     @State private var saving = false
     @State private var error: String?
     @FocusState private var titleFocused: Bool
+    @State private var ruleOffer: (needle: String, venture: String)?
+    @State private var showRuleOffer = false
 
     var body: some View {
         NavigationStack {
@@ -122,6 +124,18 @@ struct AddTaskSheet: View {
                     }
                 }
             }
+            .alert(ruleOfferTitle, isPresented: $showRuleOffer) {
+                Button("Always") {
+                    guard let offer = ruleOffer else { return }
+                    Task {
+                        try? await store.alwaysSend(from: offer.needle, to: offer.venture)
+                        dismiss()
+                    }
+                }
+                Button("Just This One", role: .cancel) { dismiss() }
+            } message: {
+                Text("New email from \(ruleOffer?.needle ?? "") will land in \(VentureStyle.of(ruleOffer?.venture ?? "").short). You can change it in Settings › Categories.")
+            }
             .alert(editing == nil ? "Couldn't add it" : "Couldn't save it", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
                 Button("OK", role: .cancel) {}
             } message: {
@@ -210,6 +224,14 @@ struct AddTaskSheet: View {
         do {
             if let item = editing {
                 try await store.update(item, changes(from: final, item: item))
+                // Moved to another category: offer to send this sender's mail there from now on.
+                if final.venture != original.venture, let needle = senderNeedle(item, final),
+                   let target = CategoryStore.find(final.venture),
+                   !target.rules.contains(where: { $0.kind == .from && $0.needle.lowercased() == needle.lowercased() }) {
+                    ruleOffer = (needle, final.venture)
+                    showRuleOffer = true
+                    return
+                }
             } else {
                 try await store.add(final, kind: request.kind)
             }
@@ -234,5 +256,20 @@ struct AddTaskSheet: View {
         if final.amount != original.amount { c.amount = .some(final.amount) }
         if day(final.due) != day(original.due) { c.due = .some(day(final.due)) }
         return c
+    }
+
+    private var ruleOfferTitle: String {
+        guard let offer = ruleOffer else { return "" }
+        return "Always send \(offer.needle) to \(VentureStyle.of(offer.venture).short)?"
+    }
+
+    /// What identifies this sender in a From line: the site (geico.com) when
+    /// the email sorter recorded it, else the sender's name. Nothing for tasks
+    /// added by hand.
+    private func senderNeedle(_ item: Item, _ final: TaskDraft) -> String? {
+        if let domain = item.domain, !domain.isEmpty { return domain }
+        guard item.messageID != nil else { return nil }
+        let name = final.from.trimmingCharacters(in: .whitespaces)
+        return name.count >= 3 ? name : nil
     }
 }
