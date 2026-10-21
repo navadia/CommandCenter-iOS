@@ -134,13 +134,14 @@ struct TodayView: View {
             }
             .padding(.horizontal, 16)
             .animation(.spring(response: 0.4, dampingFraction: 0.8), value: top.id)
-        } else if store.hasToken && !store.isLoading {
+        } else if store.hasToken && !store.isLoading && board.openCount == 0 {
+            // Nothing urgent but items open: no card at all (the headline says it).
+            // Only a completely empty list gets the "All clear" card.
             HStack(spacing: 16) {
                 SunMark(width: 54)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(board.openCount == 0 ? "All clear" : "Nothing due soon").font(.headline)
-                    Text(board.openCount == 0 ? "New mail shows up here as it arrives."
-                                              : "\(board.openCount) open below whenever you have a minute.")
+                    Text("All clear").font(.headline)
+                    Text("New mail shows up here as it arrives.")
                         .font(.subheadline).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
