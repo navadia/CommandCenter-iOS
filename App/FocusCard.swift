@@ -72,10 +72,9 @@ struct FocusCard: View {
                     }
                     .buttonStyle(.glass)
                     Button(action: onOpen) {
-                        Text("Open").fontWeight(.semibold).lineLimit(1).frame(maxWidth: .infinity)
+                        Text(item.messageID == nil ? "Edit" : "Open").fontWeight(.semibold).lineLimit(1).frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.glass)
-                    .disabled(item.messageID == nil)
                     Button(action: onDone) {
                         Text("Done")
                             .fontWeight(.bold)

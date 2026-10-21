@@ -11,6 +11,7 @@ struct FocusView: View {
     @State private var doneCount = 0
     @State private var laterCount = 0
     @State private var openItem: Item?
+    @State private var editing: Item?
 
     private var current: Item? { index < queue.count ? queue[index] : nil }
 
@@ -25,7 +26,7 @@ struct FocusView: View {
                 if let item = current {
                     SwipeToDecide(onDone: { finish(item) }, onLater: { later(item) }) {
                         FocusCard(item: item, large: true,
-                                  onLater: { later(item) }, onOpen: { openItem = item }, onDone: { finish(item) })
+                                  onLater: { later(item) }, onOpen: { open(item) }, onDone: { finish(item) })
                             .frame(maxHeight: .infinity)
                     }
                     .id(item.id)
@@ -44,8 +45,11 @@ struct FocusView: View {
 
                     HStack(spacing: 28) {
                         circleButton("Later", systemImage: "clock") { later(item) }
-                        circleButton("Open", systemImage: "envelope") { openItem = item }
-                            .disabled(item.messageID == nil)
+                        if item.messageID == nil {
+                            circleButton("Edit", systemImage: "pencil") { editing = item }
+                        } else {
+                            circleButton("Open", systemImage: "envelope") { openItem = item }
+                        }
                         circleButton("Done", systemImage: "checkmark", prominent: true) { finish(item) }
                     }
                 } else {
@@ -67,9 +71,33 @@ struct FocusView: View {
                 }
             }
             .navigationDestination(item: $openItem) { EmailView(item: $0) }
+            .toolbar {
+                if let item = current {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Edit", systemImage: "pencil") { editing = item }
+                    }
+                }
+            }
+            .sheet(item: $editing, onDismiss: syncCurrent) {
+                AddTaskSheet(request: CaptureRequest(input: .edit($0), kind: .typed))
+            }
         }
         .onAppear { queue = store.board.focusQueue }
         .sensoryFeedback(.success, trigger: doneCount)
+    }
+
+    private func open(_ item: Item) {
+        if item.messageID != nil { openItem = item } else { editing = item }
+    }
+
+    /// After an edit: show the new text, or move on if it was marked done there.
+    private func syncCurrent() {
+        guard let item = current else { return }
+        if let fresh = store.items.first(where: { $0.id == item.id }) {
+            queue[index] = fresh
+        } else {
+            withAnimation { index += 1 }
+        }
     }
 
     private func finish(_ item: Item) {

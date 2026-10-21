@@ -74,7 +74,13 @@ struct VentureView: View {
                         // but blurred enough that the text stays easy to read.
                         .glassTile(radius: 18)
                         .contentShape(.rect)
-                        .onTapGesture { if item.messageID != nil { openItem = item } }
+                        .onTapGesture {
+                            if item.messageID != nil {
+                                openItem = item
+                            } else {
+                                CaptureCenter.shared.request = CaptureRequest(input: .edit(item), kind: .typed)
+                            }
+                        }
                         .contextMenu {
                             Button("Edit", systemImage: "pencil") {
                                 CaptureCenter.shared.request = CaptureRequest(input: .edit(item), kind: .typed)

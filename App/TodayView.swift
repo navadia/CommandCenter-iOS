@@ -111,7 +111,7 @@ struct TodayView: View {
                 SwipeToDecide(onDone: { done([top.id]) }, onLater: { store.snooze(top.id) }) {
                     FocusCard(item: top,
                               onLater: { withAnimation { store.snooze(top.id) } },
-                              onOpen: { openItem = top },
+                              onOpen: { if top.messageID != nil { openItem = top } else { edit(top) } },
                               onDone: { done([top.id]) })
                         .contextMenu { menu(for: top) }
                 }
@@ -215,6 +215,8 @@ struct TodayView: View {
             if selection.contains(item.id) { selection.remove(item.id) } else { selection.insert(item.id) }
         } else if item.messageID != nil {
             openItem = item
+        } else {
+            edit(item)          // added by hand: no email, so open it to edit
         }
     }
 
