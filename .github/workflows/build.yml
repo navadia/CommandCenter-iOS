@@ -4,6 +4,9 @@ name: Build iOS app
 # publishes it as the "latest" release, so the phone can always download
 #   https://github.com/navadia/CommandCenter-iOS/releases/latest/download/CommandCenter.ipa
 # SideStore signs it with your Apple ID when you install it.
+# apps.json beside it is a SideStore source: add
+#   https://github.com/navadia/CommandCenter-iOS/releases/download/latest/apps.json
+# in SideStore > Sources once, and new builds show up there with an Update button.
 
 on:
   push:
@@ -54,6 +57,7 @@ jobs:
             -destination 'generic/platform=iOS' \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            MARKETING_VERSION="1.0.$(sed -nE 's/.*CURRENT_PROJECT_VERSION: "([0-9]+)".*/\1/p' project.yml)" \
             | tee build.log | grep -E "error:|warning: .*deprecated|BUILD (SUCCEEDED|FAILED)" || true
           test -d build/Build/Products/Release-iphoneos/CommandCenter.app
 
@@ -61,6 +65,14 @@ jobs:
         run: |
           set -o pipefail
           scripts/package.sh 2>&1 | tee -a build.log
+
+      - name: Write the SideStore source (apps.json)
+        run: |
+          BUILD=$(sed -nE 's/.*CURRENT_PROJECT_VERSION: "([0-9]+)".*/\1/p' project.yml)
+          SIZE=$(stat -f%z CommandCenter.ipa)
+          NOTES=$(git log -1 --format=%s)
+          BUILD="$BUILD" SIZE="$SIZE" NOTES="$NOTES" python3 scripts/source.py > apps.json
+          cat apps.json
 
       - name: Publish the error log on failure (readable without Actions access)
         if: failure()
@@ -80,7 +92,7 @@ jobs:
         run: |
           gh release delete build-failed --yes --cleanup-tag || true
           gh release delete latest --yes --cleanup-tag || true
-          gh release create latest CommandCenter.ipa \
+          gh release create latest CommandCenter.ipa apps.json \
             --title "Latest build ($(git rev-parse --short HEAD))" \
             --notes "Built from $(git rev-parse --short HEAD). Open this page on your iPhone, download CommandCenter.ipa, then Share -> SideStore." \
             --latest
