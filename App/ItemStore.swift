@@ -149,10 +149,29 @@ final class ItemStore {
         do {
             guard let db = try await categoriesDB(client) else { categoriesMissing = true; return }
             categoriesMissing = false
-            CategoryStore.save(try await client.categories(in: db))
+            var list = try await client.categories(in: db)
+            await uploadColorPicks(&list, client: client, db: db)
+            CategoryStore.save(list)
             WidgetCenter.shared.reloadAllTimelines()
         } catch {
             // Offline or Notion busy: keep the cached list.
+        }
+    }
+
+    /// Colors picked on this phone before categories lived in Notion were
+    /// kept only on this phone. Move each one into Notion (where the
+    /// category has no color yet) so every phone shows the same colors.
+    private func uploadColorPicks(_ list: inout [Category], client: NotionClient, db: String) async {
+        for index in list.indices {
+            let short = VentureStyle.standard(list[index].name).short
+            guard let pick = VentureColors.pickedName(for: short) else { continue }
+            if list[index].color.isEmpty {
+                var updated = list[index]
+                updated.color = pick
+                guard let saved = try? await client.save(updated, in: db) else { continue }
+                list[index] = saved
+            }
+            VentureColors.set(nil, for: short)
         }
     }
 
