@@ -124,7 +124,7 @@ struct SettingsView: View {
                          : "How see-through the cards and email tiles are, everywhere in the app. It turns solid by itself when Reduce Transparency is on in iPhone Settings › Accessibility. The buttons and bars follow iPhone's own Liquid Glass setting in Display & Brightness.")
                 }
 
-                Section("Status") {
+                Section {
                     LabeledContent("Notion") {
                         Text(store.hasToken ? (store.errorMessage == nil ? "Connected" : "Error") : "Not set")
                             .foregroundStyle(store.hasToken && store.errorMessage == nil ? .green : .secondary)
@@ -140,6 +140,13 @@ struct SettingsView: View {
                         LabeledContent("Last updated", value: date.formatted(date: .omitted, time: .shortened))
                     }
                     LabeledContent("Shared storage", value: SharedStore.isGroupWorking ? "Working" : "Unavailable")
+                } header: {
+                    Text("Status")
+                } footer: {
+                    if !SharedStore.isGroupWorking {
+                        Text("The widget and the Shortcuts actions can't see your token until this works. \(SharedStore.groupDiagnostics)")
+                            .textSelection(.enabled)
+                    }
                 }
             }
             .navigationDestination(isPresented: $showCategories) { CategoriesView() }

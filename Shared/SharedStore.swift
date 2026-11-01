@@ -3,19 +3,44 @@ import Security
 
 /// Storage shared by the app and the widget.
 ///
-/// SideStore (like AltStore) renames App Group IDs when it signs the app by
-/// appending your team ID, and records the real IDs in the `ALTAppGroups`
-/// key of Info.plist. We read that key first so the app and widget always
-/// agree on the container.
+/// SideStore (like AltStore) renames App Group IDs when it signs the app,
+/// usually by appending your team ID, and is meant to record the real IDs in
+/// the `ALTAppGroups` key of Info.plist. Some SideStore builds don't update
+/// that key, so we also read the groups this copy was actually signed with
+/// (the provisioning profile inside the app) and use the first one iOS
+/// really opens. The app and the widget each do this and land on the same one.
 enum SharedStore {
     static let fallbackGroup = "group.com.navadia.commandcenter"
 
-    static var groupID: String {
-        if let groups = Bundle.main.object(forInfoDictionaryKey: "ALTAppGroups") as? [String],
-           let first = groups.first {
-            return first
-        }
-        return fallbackGroup
+    static let groupID: String = {
+        let candidates = infoPlistGroups + profileGroups + [fallbackGroup]
+        return candidates.first {
+            FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: $0) != nil
+        } ?? candidates.first ?? fallbackGroup
+    }()
+
+    /// What Settings shows when shared storage isn't working.
+    static var groupDiagnostics: String {
+        let list = { (groups: [String]) in groups.isEmpty ? "none" : groups.joined(separator: ", ") }
+        return "Using \(groupID). Info.plist: \(list(infoPlistGroups)). Signed with: \(list(profileGroups))."
+    }
+
+    private static var infoPlistGroups: [String] {
+        Bundle.main.object(forInfoDictionaryKey: "ALTAppGroups") as? [String] ?? []
+    }
+
+    /// The App Groups in embedded.mobileprovision (a signed plist).
+    private static var profileGroups: [String] {
+        guard let url = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision"),
+              let data = try? Data(contentsOf: url),
+              let start = data.range(of: Data("<?xml".utf8)),
+              let end = data.range(of: Data("</plist>".utf8), in: start.lowerBound..<data.endIndex),
+              let plist = try? PropertyListSerialization.propertyList(
+                  from: data.subdata(in: start.lowerBound..<end.upperBound), format: nil) as? [String: Any],
+              let entitlements = plist["Entitlements"] as? [String: Any],
+              let groups = entitlements["com.apple.security.application-groups"] as? [String]
+        else { return [] }
+        return groups
     }
 
     static var defaults: UserDefaults {
