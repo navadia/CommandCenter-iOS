@@ -73,7 +73,8 @@ struct EmailView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
-            }            if item.needsCheck {
+            }
+            if item.needsCheck {
                 Label(item.noteText, systemImage: "checkmark.seal.fill")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(.orange)
