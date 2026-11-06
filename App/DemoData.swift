@@ -37,7 +37,8 @@ enum DemoData {
             Item(id: "d8", title: "McLane: Invoice #4471 is ready", type: "money", venture: "7-Eleven",
                  amount: 1284, due: day(4), trial: false, link: link("a8"), domain: "mclaneco.com", created: ago(50)),
             Item(id: "d9", title: "Capital One: Your statement is ready", type: "money", venture: "Personal",
-                 amount: 412, due: day(11), trial: false, link: link("a9"), domain: "capitalone.com", created: ago(80)),
+                 amount: 412, due: day(11), trial: false, link: link("a9"), domain: "capitalone.com", created: ago(80),
+                 note: "Check: payment received email from Capital One, Nov 6 ($35.00) (Payment confirmation). Mark done if it was this one."),
             Item(id: "d10", title: "Greenhouse: Share your interview availability", type: "todo", venture: "Job Applications",
                  amount: nil, due: nil, trial: false, link: link("a10"), domain: "greenhouse.io", created: ago(100)),
             Item(id: "d11", title: "Priya: Diwali dinner plans", type: "todo", venture: "Family/General",
@@ -50,6 +51,17 @@ enum DemoData {
                  source: #"power {"state":"low","used":195.2,"days":7,"total":31,"left":24,"proj":864,"goal":1000,"target":1030,"need":835,"pace":27.9,"perday":34.8,"bill":215,"rate":22.2,"start":"2026-10-13","end":"2026-11-12"}"#),
             Item(id: "d13", title: "Get Wi-Fi done for 7-Eleven", type: "todo", venture: "7-Eleven",
                  amount: nil, due: nil, trial: false, link: nil, domain: nil, created: ago(2400), source: "claude"),
+        ]
+    }
+
+    static var autoClosed: [Item] {
+        [
+            Item(id: "c1", title: "AT&T: Your wireless bill is ready", type: "money", venture: "Family/General",
+                 amount: 86, due: nil, trial: false, link: nil, domain: "att.com",
+                 note: "Closed by itself: payment received email from AT&T, Nov 6 ($86.00)."),
+            Item(id: "c2", title: "Executive Inn: Reservation confirmed", type: "travel", venture: "Travel",
+                 amount: nil, due: nil, trial: false, link: nil, domain: nil,
+                 note: "Closed by itself: cancelled email from Executive Inn, Nov 5."),
         ]
     }
 

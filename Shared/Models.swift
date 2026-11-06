@@ -15,6 +15,19 @@ struct Item: Identifiable, Codable, Hashable, Sendable {
     var domain: String? = nil     // sender's site, from the parser's Fingerprint ("geico.com|…")
     var created: String? = nil    // Notion created_time (ISO 8601)
     var source: String? = nil     // parser's "Sender name | destination"
+    var note: String? = nil       // parser's Note: "Closed by itself: …" or "Check: …"
+
+    /// A payment / cancellation email came in but the match wasn't certain.
+    var needsCheck: Bool { note?.hasPrefix("Check:") == true }
+    var closedByItself: Bool { note?.hasPrefix("Closed by itself") == true }
+    /// The note without its "Check: " / "Closed by itself: " lead-in.
+    var noteText: String {
+        guard let note, let r = note.range(of: ": ") else { return note ?? "" }
+        return String(note[r.upperBound...])
+    }
+    var checkHint: String {
+        (note ?? "").contains("payment received") ? "Payment email found · done?" : "Cancellation email found · done?"
+    }
 
     /// An email opened from a notification that isn't a Command Center row (FYI mail).
     var isMailOnly: Bool { id.hasPrefix("mail-") }

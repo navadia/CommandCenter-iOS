@@ -28,6 +28,7 @@ struct TodayView: View {
                         needYou
                         if !board.ventures.isEmpty { venturesRow }
                         if !board.rest.isEmpty { everythingElse }
+                        if !store.autoClosed.isEmpty { closedByItself }
                     }
                 }
                 .padding(.bottom, 40)
@@ -211,6 +212,54 @@ struct TodayView: View {
         .animation(.default, value: board.rest.map(\.id))
     }
 
+    // MARK: - Closed by itself
+
+    @State private var showClosed = false
+
+    /// What the email sorter finished for you (a payment or cancellation email
+    /// matched it), so nothing disappears without you seeing it. Undo reopens.
+    private var closedByItself: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                withAnimation(.snappy) { showClosed.toggle() }
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).font(.title3)
+                    Text("Closed by itself").font(.headline)
+                    Text("\(store.autoClosed.count)").font(.headline).foregroundStyle(.secondary)
+                    Spacer()
+                    Image(systemName: "chevron.down")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                        .rotationEffect(.degrees(showClosed ? 180 : 0))
+                }
+                .padding(16)
+                .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            if showClosed {
+                ForEach(store.autoClosed) { item in
+                    HStack(alignment: .top, spacing: 12) {
+                        SenderAvatar(item: item, size: 34, showBadge: false)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(item.cleanTitle).font(.subheadline.weight(.semibold)).lineLimit(1)
+                            Text(item.noteText).font(.footnote).foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 4)
+                        Button("Undo") { Task { await store.reopen(item) } }
+                            .font(.subheadline.weight(.semibold))
+                            .buttonStyle(.borderless)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .overlay(alignment: .top) { Divider().padding(.leading, 62) }
+                }
+            }
+        }
+        .card(radius: 26)
+        .padding(.horizontal, 16)
+    }
+
     private func tap(_ item: Item) {
         if selecting {
             if selection.contains(item.id) { selection.remove(item.id) } else { selection.insert(item.id) }
@@ -371,6 +420,12 @@ struct ItemRow: View {
                         Text(item.subject)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    if item.needsCheck {
+                        Label(item.checkHint, systemImage: "checkmark.seal.fill")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.orange)
                             .lineLimit(1)
                     }
                 }

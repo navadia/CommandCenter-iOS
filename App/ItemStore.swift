@@ -12,6 +12,8 @@ final class ItemStore {
     var hasToken = TokenStore.load() != nil
     var hasGmail = GmailCredentials.load() != nil
     private(set) var snoozed = SnoozeStore.activeIDs()
+    /// Closed by the email sorter in the last two days (shown with Undo).
+    private(set) var autoClosed: [Item] = []
 
     var board: Board { Board(items, snoozed: snoozed) }
 
@@ -19,6 +21,7 @@ final class ItemStore {
         if DemoData.isOn {
             CategoryStore.save(DemoData.categories)
             items = DemoData.items
+            autoClosed = DemoData.autoClosed
             hasToken = true
             lastUpdated = .now
             let domains = items.compactMap(\.domain)
@@ -34,7 +37,9 @@ final class ItemStore {
         isLoading = true
         defer { isLoading = false }
         do {
-            let fresh = try await NotionClient(token: token).openItems()
+            let client = NotionClient(token: token)
+            let fresh = try await client.openItems()
+            Task { if let closed = try? await client.closedByItself() { self.autoClosed = closed } }
             items = fresh
             lastUpdated = .now
             errorMessage = nil
@@ -120,6 +125,19 @@ final class ItemStore {
             items.append(contentsOf: failed)
             SharedStore.saveSnapshot(items)
             errorMessage = "\(failed.count) item\(failed.count == 1 ? "" : "s") couldn't be marked done. Try again."
+        }
+    }
+
+    /// Undo something the sorter closed by itself.
+    func reopen(_ item: Item) async {
+        if DemoData.isOn { autoClosed.removeAll { $0.id == item.id }; items.append(item); return }
+        guard let token = TokenStore.load() else { return }
+        do {
+            try await NotionClient(token: token).reopen(item.id)
+            autoClosed.removeAll { $0.id == item.id }
+            await refresh()
+        } catch {
+            errorMessage = "Couldn't reopen it. Try again."
         }
     }
 

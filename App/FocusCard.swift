@@ -47,6 +47,13 @@ struct FocusCard: View {
                 .lineLimit(large ? 4 : 2)
                 .padding(.top, large ? 20 : 12)
 
+            if item.needsCheck {
+                Label(item.noteText, systemImage: "checkmark.seal.fill")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.orange)
+                    .padding(.top, 8)
+            }
+
             if large, let amount = item.amountText {
                 Text(amount)
                     .font(.system(size: 44, weight: .bold))

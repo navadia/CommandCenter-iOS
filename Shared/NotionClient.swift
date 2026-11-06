@@ -198,6 +198,32 @@ struct NotionClient: Sendable {
                         color: text("Color").trimmingCharacters(in: .whitespaces), about: text("About"))
     }
 
+    /// Rows the email sorter closed by itself (a payment or cancellation
+    /// email matched them) in the last two days, newest first.
+    func closedByItself() async throws -> [Item] {
+        let since = ISO8601DateFormatter().string(from: Date.now.addingTimeInterval(-48 * 3600))
+        let body: [String: Any] = [
+            "filter": ["and": [
+                ["property": "Status", "select": ["equals": "done"]],
+                ["property": "Note", "rich_text": ["starts_with": "Closed by itself"]],
+                ["timestamp": "last_edited_time", "last_edited_time": ["on_or_after": since]],
+            ]],
+            "sorts": [["timestamp": "last_edited_time", "direction": "descending"]],
+            "page_size": 20,
+        ]
+        let json = try await send(request("databases/\(Self.databaseID)/query", method: "POST", body: body))
+        return (json["results"] as? [[String: Any]] ?? []).compactMap(Self.item(from:))
+    }
+
+    /// Undo a close: open again, and forget the note.
+    func reopen(_ id: String) async throws {
+        let body: [String: Any] = ["properties": [
+            "Status": ["select": ["name": "open"]],
+            "Note": ["rich_text": []],
+        ]]
+        _ = try await send(request("pages/\(id)", method: "PATCH", body: body))
+    }
+
     func markDone(_ id: String) async throws {
         let body: [String: Any] = ["properties": ["Status": ["select": ["name": "done"]]]]
         _ = try await send(request("pages/\(id)", method: "PATCH", body: body))
@@ -217,6 +243,8 @@ struct NotionClient: Sendable {
         let fpParts = (p["Fingerprint"] as? [String: Any])?["rich_text"] as? [[String: Any]] ?? []
         let fingerprint = fpParts.compactMap { $0["plain_text"] as? String }.joined()
         let domain = fingerprint.split(separator: "|").first.map(String.init).flatMap { $0.contains(".") ? $0 : nil }
+        let noteParts = (p["Note"] as? [String: Any])?["rich_text"] as? [[String: Any]] ?? []
+        let note = noteParts.compactMap { $0["plain_text"] as? String }.joined()
 
         return Item(
             id: id,
@@ -229,7 +257,8 @@ struct NotionClient: Sendable {
             link: (p["Link"] as? [String: Any])?["url"] as? String,
             domain: domain,
             created: page["created_time"] as? String,
-            source: source.isEmpty ? nil : source
+            source: source.isEmpty ? nil : source,
+            note: note.isEmpty ? nil : note
         )
     }
 }
