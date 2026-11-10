@@ -22,6 +22,9 @@ struct FYIMail: Identifiable, Codable, Hashable, Sendable {
 
     var subject: String {
         if title.hasPrefix(sender + ": ") { return String(title.dropFirst(sender.count + 2)) }
+        if let r = title.range(of: ": "), title.distance(from: title.startIndex, to: r.lowerBound) <= 40 {
+            return String(title[r.upperBound...])          // "Robinhood Credit Card: Thank you…"
+        }
         return title
     }
 
