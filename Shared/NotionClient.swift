@@ -59,7 +59,8 @@ struct NotionClient: Sendable {
     }
 
     /// A new open row, added by hand (Add sheet, Action button, Back Tap).
-    func create(title: String, type: String, venture: String, amount: Double?, due: String?, source: String) async throws -> Item? {
+    func create(title: String, type: String, venture: String, amount: Double?, due: String?, source: String,
+                link: String? = nil, messageID: String? = nil) async throws -> Item? {
         func text(_ s: String) -> [String: Any] { ["rich_text": [["text": ["content": String(s.prefix(1_900))]]]] }
         var props: [String: Any] = [
             "Title": ["title": [["text": ["content": String(title.prefix(200))]]]],
@@ -70,6 +71,8 @@ struct NotionClient: Sendable {
         ]
         if let amount { props["Amount"] = ["number": amount] }
         if let due { props["Due"] = ["date": ["start": due]] }
+        if let link { props["Link"] = ["url": link] }
+        if let messageID { props["MsgID"] = text(messageID) }
         let json = try await send(request("pages", method: "POST",
                                           body: ["parent": ["database_id": Self.databaseID], "properties": props]))
         return Self.item(from: json)
@@ -101,6 +104,15 @@ struct NotionClient: Sendable {
     /// Finds the Categories table: Command Center's parent page, then its child
     /// databases. The email sorter creates the table on its first run.
     func categoriesDatabaseID() async throws -> String? {
+        try await siblingDatabaseID(titled: "Categories")
+    }
+
+    /// The "FYI Mail" table the email sorter files everything it isn't sure about in.
+    func fyiDatabaseID() async throws -> String? {
+        try await siblingDatabaseID(titled: "FYI Mail")
+    }
+
+    private func siblingDatabaseID(titled title: String) async throws -> String? {
         let db = try await send(request("databases/\(Self.databaseID)", method: "GET"))
         guard let parent = db["parent"] as? [String: Any], let page = parent["page_id"] as? String else { return nil }
         var cursor: String?
@@ -109,7 +121,7 @@ struct NotionClient: Sendable {
             let json = try await send(request(q, method: "GET"))
             for block in json["results"] as? [[String: Any]] ?? [] {
                 if block["type"] as? String == "child_database",
-                   (block["child_database"] as? [String: Any])?["title"] as? String == "Categories",
+                   (block["child_database"] as? [String: Any])?["title"] as? String == title,
                    block["archived"] as? Bool != true,
                    let id = block["id"] as? String {
                     return id
@@ -196,6 +208,25 @@ struct NotionClient: Sendable {
         return Category(id: id, name: name, rules: Category.rules(from: text("Rules")), order: order,
                         icon: text("Icon").trimmingCharacters(in: .whitespaces),
                         color: text("Color").trimmingCharacters(in: .whitespaces), about: text("About"))
+    }
+
+    /// FYI mail from the last `days` days, newest first (the sorter keeps 14).
+    func fyiMail(in db: String, days: Int = 14) async throws -> [FYIMail] {
+        let since = ISO8601DateFormatter().string(from: Date.now.addingTimeInterval(-Double(days) * 86_400))
+        var list: [FYIMail] = []
+        var cursor: String?
+        repeat {
+            var body: [String: Any] = [
+                "filter": ["timestamp": "created_time", "created_time": ["on_or_after": since]],
+                "sorts": [["timestamp": "created_time", "direction": "descending"]],
+                "page_size": 100,
+            ]
+            if let cursor { body["start_cursor"] = cursor }
+            let json = try await send(request("databases/\(db)/query", method: "POST", body: body))
+            list += (json["results"] as? [[String: Any]] ?? []).compactMap(FYIMail.init(page:))
+            cursor = (json["has_more"] as? Bool == true) ? json["next_cursor"] as? String : nil
+        } while cursor != nil && list.count < 400
+        return list
     }
 
     /// Rows the email sorter closed by itself (a payment or cancellation

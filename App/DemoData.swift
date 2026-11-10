@@ -54,6 +54,25 @@ enum DemoData {
         ]
     }
 
+    static var fyi: [FYIMail] {
+        let ago = { (hours: Double) in Date.now.addingTimeInterval(-hours * 3600) }
+        return [
+            FYIMail(id: "f1", title: "Stripe: Bank account added to your business", from: "Stripe | admin@example.com",
+                    venture: "Vishramo", received: ago(1), link: nil, messageID: nil, domain: "stripe.com"),
+            FYIMail(id: "f2", title: "Google: Security alert", from: "Google | me@example.com",
+                    venture: "Family/General", received: ago(3), link: nil, messageID: nil, security: true, count: 2,
+                    domain: "google.com"),
+            FYIMail(id: "f3", title: "Robinhood Credit Card: Thank you for your payment", from: "Robinhood | bank@example.com",
+                    venture: "Banking", received: ago(5), link: nil, messageID: nil, paid: true, domain: "robinhood.com"),
+            FYIMail(id: "f4", title: "UPS: Your package was delivered", from: "UPS | home@example.com",
+                    venture: "Shared/Household", received: ago(9), link: nil, messageID: nil, domain: "ups.com"),
+            FYIMail(id: "f5", title: "Rakuten: Your Cash Back Statement for October", from: "Rakuten | shop@example.com",
+                    venture: "Shopping", received: ago(30), link: nil, messageID: nil, domain: "rakuten.com"),
+            FYIMail(id: "f6", title: "Express Energy: Your Home Energy Report", from: "Express Energy | home@example.com",
+                    venture: "Shared/Household", received: ago(52), link: nil, messageID: nil, domain: "expressenergy.com"),
+        ]
+    }
+
     static var autoClosed: [Item] {
         [
             Item(id: "c1", title: "AT&T: Your wireless bill is ready", type: "money", venture: "Family/General",

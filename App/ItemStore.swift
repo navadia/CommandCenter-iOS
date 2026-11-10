@@ -14,6 +14,11 @@ final class ItemStore {
     private(set) var snoozed = SnoozeStore.activeIDs()
     /// Closed by the email sorter in the last two days (shown with Undo).
     private(set) var autoClosed: [Item] = []
+    /// The FYI Mail table, newest first (the sorter keeps two weeks).
+    private(set) var fyi: [FYIMail] = []
+    private(set) var fyiLoaded = false
+    /// FYI mail that arrived today, for the line at the bottom of Today.
+    var fyiToday: Int { fyi.filter { $0.received.map(Calendar.current.isDateInToday) ?? false }.count }
 
     var board: Board { Board(items, snoozed: snoozed) }
 
@@ -22,6 +27,8 @@ final class ItemStore {
             CategoryStore.save(DemoData.categories)
             items = DemoData.items
             autoClosed = DemoData.autoClosed
+            fyi = DemoData.fyi
+            fyiLoaded = true
             hasToken = true
             lastUpdated = .now
             let domains = items.compactMap(\.domain)
@@ -40,6 +47,7 @@ final class ItemStore {
             let client = NotionClient(token: token)
             let fresh = try await client.openItems()
             Task { if let closed = try? await client.closedByItself() { self.autoClosed = closed } }
+            Task { await self.loadFYI() }
             items = fresh
             lastUpdated = .now
             errorMessage = nil
@@ -125,6 +133,46 @@ final class ItemStore {
             items.append(contentsOf: failed)
             SharedStore.saveSnapshot(items)
             errorMessage = "\(failed.count) item\(failed.count == 1 ? "" : "s") couldn't be marked done. Try again."
+        }
+    }
+
+    private static let fyiDBKey = "fyiDB"
+
+    func loadFYI() async {
+        if DemoData.isOn { return }
+        guard let token = TokenStore.load() else { return }
+        let client = NotionClient(token: token)
+        do {
+            var db = SharedStore.defaults.string(forKey: Self.fyiDBKey)
+            if db == nil {
+                db = try await client.fyiDatabaseID()
+                if let db { SharedStore.defaults.set(db, forKey: Self.fyiDBKey) }
+            }
+            guard let db else { fyiLoaded = true; return }
+            fyi = try await client.fyiMail(in: db)
+            fyiLoaded = true
+            Task { await SenderIcons.prefetch(self.fyi.compactMap(\.domain)); self.fyi = self.fyi }
+        } catch {
+            fyiLoaded = true          // offline: keep what we showed last
+        }
+    }
+
+    /// "Make it a task": the FYI mail becomes an open Command Center row in the
+    /// same category, with its email attached. The FYI row stays as it is.
+    func makeTask(from mail: FYIMail) async throws {
+        if DemoData.isOn {
+            items.append(Item(id: UUID().uuidString, title: mail.title, type: "todo", venture: mail.venture,
+                              amount: nil, due: nil, trial: false, link: mail.link, domain: mail.domain))
+            return
+        }
+        guard let token = TokenStore.load() else { throw NotionClient.NotionError.http(401, "No Notion token") }
+        let saved = try await NotionClient(token: token).create(
+            title: mail.title, type: "todo", venture: mail.venture, amount: nil, due: nil,
+            source: "fyi", link: mail.link, messageID: mail.messageID)
+        if let saved, !items.contains(where: { $0.id == saved.id }) {
+            items.append(saved)
+            SharedStore.saveSnapshot(items)
+            WidgetCenter.shared.reloadAllTimelines()
         }
     }
 

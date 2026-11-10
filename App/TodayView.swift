@@ -9,6 +9,7 @@ struct TodayView: View {
     @State private var openVenture: String?
     @State private var showSettings = false
     @State private var showFocus = false
+    @State private var showFYI = false
     @State private var selecting = false
     @State private var selection = Set<String>()
     @State private var capture = CaptureCenter.shared
@@ -29,6 +30,7 @@ struct TodayView: View {
                         if !board.ventures.isEmpty { venturesRow }
                         if !board.rest.isEmpty { everythingElse }
                         if !store.autoClosed.isEmpty { closedByItself }
+                        fyiLink
                     }
                 }
                 .padding(.bottom, 40)
@@ -39,6 +41,7 @@ struct TodayView: View {
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(item: $openItem) { EmailView(item: $0) }
             .navigationDestination(item: $openVenture) { VentureView(venture: $0) }
+            .navigationDestination(isPresented: $showFYI) { FYIView() }
             .refreshable { await store.refresh() }
             .sheet(isPresented: $showSettings) { SettingsView() }
             .sheet(item: Bindable(capture).request) { AddTaskSheet(request: $0) }
@@ -55,6 +58,7 @@ struct TodayView: View {
                 if ProcessInfo.processInfo.arguments.contains("-demoFocus") { showFocus = true }
                 if ProcessInfo.processInfo.arguments.contains("-demoSettings") { showSettings = true }
                 if let venture = DemoData.argument(after: "-demoVenture") { openVenture = venture }
+                if ProcessInfo.processInfo.arguments.contains("-demoFYI") { showFYI = true }
                 if let id = DemoData.argument(after: "-demoEdit"), let item = store.items.first(where: { $0.id == id }) {
                     edit(item)
                 }
@@ -210,6 +214,30 @@ struct TodayView: View {
             .padding(.horizontal, 16)
         }
         .animation(.default, value: board.rest.map(\.id))
+    }
+
+    // MARK: - FYI
+
+    /// The way into everything the sorter filed as FYI, so nothing lives only in Notion.
+    private var fyiLink: some View {
+        Button { showFYI = true } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "tray.full.fill").foregroundStyle(.secondary).font(.title3)
+                Text("FYI").font(.headline)
+                Text(store.fyiToday > 0 ? "\(store.fyiToday) today" : "Receipts, notices, sign-ins")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(16)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .card(radius: 26)
+        .padding(.horizontal, 16)
     }
 
     // MARK: - Closed by itself
