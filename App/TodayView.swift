@@ -10,6 +10,7 @@ struct TodayView: View {
     @State private var showSettings = false
     @State private var showFocus = false
     @State private var showFYI = false
+    @State private var showReceipts = false
     @State private var selecting = false
     @State private var selection = Set<String>()
     @State private var capture = CaptureCenter.shared
@@ -42,6 +43,7 @@ struct TodayView: View {
             .navigationDestination(item: $openItem) { EmailView(item: $0) }
             .navigationDestination(item: $openVenture) { VentureView(venture: $0) }
             .navigationDestination(isPresented: $showFYI) { FYIView() }
+            .navigationDestination(isPresented: $showReceipts) { ReceiptsView() }
             .refreshable { await store.refresh() }
             .sheet(isPresented: $showSettings) { SettingsView() }
             .sheet(item: Bindable(capture).request) { AddTaskSheet(request: $0) }
@@ -59,6 +61,7 @@ struct TodayView: View {
                 if ProcessInfo.processInfo.arguments.contains("-demoSettings") { showSettings = true }
                 if let venture = DemoData.argument(after: "-demoVenture") { openVenture = venture }
                 if ProcessInfo.processInfo.arguments.contains("-demoFYI") { showFYI = true }
+                if ProcessInfo.processInfo.arguments.contains("-demoReceipts") { showReceipts = true }
                 if let id = DemoData.argument(after: "-demoEdit"), let item = store.items.first(where: { $0.id == id }) {
                     edit(item)
                 }
@@ -218,15 +221,26 @@ struct TodayView: View {
 
     // MARK: - FYI
 
-    /// The way into everything the sorter filed as FYI, so nothing lives only in Notion.
+    /// The ways into what the sorter keeps outside Today: FYI mail (two
+    /// weeks) and Receipts (for good). Nothing lives only in Notion.
     private var fyiLink: some View {
-        Button { showFYI = true } label: {
+        VStack(spacing: 0) {
+            moreRow(icon: "tray.full.fill", title: "FYI",
+                    detail: store.fyiToday > 0 ? "\(store.fyiToday) today" : "Receipts, notices, sign-ins") { showFYI = true }
+            Divider().padding(.leading, 50)
+            moreRow(icon: "doc.text.fill", title: "Receipts",
+                    detail: "Invoices, statements, payments") { showReceipts = true }
+        }
+        .card(radius: 26)
+        .padding(.horizontal, 16)
+    }
+
+    private func moreRow(icon: String, title: String, detail: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
             HStack(spacing: 10) {
-                Image(systemName: "tray.full.fill").foregroundStyle(.secondary).font(.title3)
-                Text("FYI").font(.headline)
-                Text(store.fyiToday > 0 ? "\(store.fyiToday) today" : "Receipts, notices, sign-ins")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                Image(systemName: icon).foregroundStyle(.secondary).font(.title3).frame(width: 28)
+                Text(title).font(.headline)
+                Text(detail).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.footnote.weight(.semibold))
@@ -236,8 +250,6 @@ struct TodayView: View {
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .card(radius: 26)
-        .padding(.horizontal, 16)
     }
 
     // MARK: - Closed by itself

@@ -17,6 +17,9 @@ final class ItemStore {
     /// The FYI Mail table, newest first (the sorter keeps two weeks).
     private(set) var fyi: [FYIMail] = []
     private(set) var fyiLoaded = false
+    /// The Receipts table (loaded when the Receipts screen opens).
+    private(set) var receipts: [Receipt] = []
+    private(set) var receiptsLoaded = false
     /// FYI mail that arrived today, for the line at the bottom of Today.
     var fyiToday: Int { fyi.filter { $0.received.map(Calendar.current.isDateInToday) ?? false }.count }
 
@@ -29,6 +32,8 @@ final class ItemStore {
             autoClosed = DemoData.autoClosed
             fyi = DemoData.fyi
             fyiLoaded = true
+            receipts = DemoData.receipts
+            receiptsLoaded = true
             hasToken = true
             lastUpdated = .now
             let domains = items.compactMap(\.domain)
@@ -154,6 +159,26 @@ final class ItemStore {
             Task { await SenderIcons.prefetch(self.fyi.compactMap(\.domain)); self.fyi = self.fyi }
         } catch {
             fyiLoaded = true          // offline: keep what we showed last
+        }
+    }
+
+    private static let receiptsDBKey = "receiptsDB"
+
+    func loadReceipts() async {
+        if DemoData.isOn { return }
+        guard let token = TokenStore.load() else { return }
+        let client = NotionClient(token: token)
+        do {
+            var db = SharedStore.defaults.string(forKey: Self.receiptsDBKey)
+            if db == nil {
+                db = try await client.receiptsDatabaseID()
+                if let db { SharedStore.defaults.set(db, forKey: Self.receiptsDBKey) }
+            }
+            guard let db else { receiptsLoaded = true; return }
+            receipts = try await client.receipts(in: db)
+            receiptsLoaded = true
+        } catch {
+            receiptsLoaded = true
         }
     }
 

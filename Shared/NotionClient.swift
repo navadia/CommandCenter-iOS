@@ -112,6 +112,28 @@ struct NotionClient: Sendable {
         try await siblingDatabaseID(titled: "FYI Mail")
     }
 
+    /// The "Receipts" table: every invoice / receipt / statement, kept for good.
+    func receiptsDatabaseID() async throws -> String? {
+        try await siblingDatabaseID(titled: "Receipts")
+    }
+
+    /// All receipts, newest first (paged; capped at 3,000 rows).
+    func receipts(in db: String) async throws -> [Receipt] {
+        var list: [Receipt] = []
+        var cursor: String?
+        repeat {
+            var body: [String: Any] = [
+                "sorts": [["property": "Date", "direction": "descending"]],
+                "page_size": 100,
+            ]
+            if let cursor { body["start_cursor"] = cursor }
+            let json = try await send(request("databases/\(db)/query", method: "POST", body: body))
+            list += (json["results"] as? [[String: Any]] ?? []).compactMap(Receipt.init(page:))
+            cursor = (json["has_more"] as? Bool == true) ? json["next_cursor"] as? String : nil
+        } while cursor != nil && list.count < 3_000
+        return list
+    }
+
     private func siblingDatabaseID(titled title: String) async throws -> String? {
         let db = try await send(request("databases/\(Self.databaseID)", method: "GET"))
         guard let parent = db["parent"] as? [String: Any], let page = parent["page_id"] as? String else { return nil }

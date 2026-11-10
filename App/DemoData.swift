@@ -73,6 +73,28 @@ enum DemoData {
         ]
     }
 
+    static var receipts: [Receipt] {
+        let day = { (offset: Int) in Calendar.current.date(byAdding: .day, value: -offset, to: .now) }
+        return [
+            Receipt(id: "r1", title: "Cloudflare: Your invoice is available", vendor: "Cloudflare", amount: 20,
+                    kind: "invoice", category: "Vishramo", date: day(4), link: nil, pdf: "https://drive.google.com", hasAttachment: true),
+            Receipt(id: "r2", title: "McLane: Invoice #4471", vendor: "McLane", amount: 1284, kind: "invoice",
+                    category: "7-Eleven", date: day(6), link: nil, pdf: "https://drive.google.com", hasAttachment: true),
+            Receipt(id: "r3", title: "AT&T: Your wireless bill is ready", vendor: "AT&T", amount: 86, kind: "invoice",
+                    category: "Family/General", date: day(8), link: nil),
+            Receipt(id: "r4", title: "Robinhood: Thank you for your payment", vendor: "Robinhood", amount: 412,
+                    kind: "payment", category: "Banking", date: day(9), link: nil),
+            Receipt(id: "r5", title: "7-Eleven: Your Fuel Receipt", vendor: "7-Eleven", amount: 48.6, kind: "receipt",
+                    category: "Shared/Household", date: day(12), link: nil),
+            Receipt(id: "r6", title: "Home Depot: Refund", vendor: "Home Depot", amount: 32.17, kind: "refund",
+                    category: "Shared/Household", date: day(15), link: nil),
+            Receipt(id: "r7", title: "Vercel: Invoice for October", vendor: "Vercel", amount: 20, kind: "invoice",
+                    category: "Vishramo", date: day(36), link: nil, pdf: "https://drive.google.com", hasAttachment: true),
+            Receipt(id: "r8", title: "Capital One: Your statement is ready", vendor: "Capital One", amount: 1240.18,
+                    kind: "statement", category: "Banking", date: day(40), link: nil),
+        ]
+    }
+
     static var autoClosed: [Item] {
         [
             Item(id: "c1", title: "AT&T: Your wireless bill is ready", type: "money", venture: "Family/General",
