@@ -544,27 +544,41 @@ private struct TempCurve: View {
                 let span = max(3600, last.timeIntervalSince(first))
                 let x = { (d: Date) in w * min(1, max(0, d.timeIntervalSince(first) / span)) }
                 let y = { (t: Double) in h - 4 - (h - 10) * (t - lo) / max(1, hi - lo) }
+                // Night (sunset to sunrise) is shown by the curve turning from
+                // yellow to a soft white, with a small sunset mark; no box.
+                let nightStart = sunset <= first ? 0 : (sunset < last ? x(sunset) : w)
+                let nightEnd = sunrise.map { $0 > first && $0 < last ? x($0) : w } ?? w
+                let curve = Path { p in
+                    for (i, hour) in hours.enumerated() {
+                        let pt = CGPoint(x: x(hour.date), y: y(hour.temp))
+                        if i == 0 { p.move(to: pt) } else { p.addLine(to: pt) }
+                    }
+                }
+                let style = StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round)
                 ZStack(alignment: .topLeading) {
-                    // Night: from sunset (if ahead) to sunrise (or the end).
-                    if sunset > first && sunset < last {
-                        let endX = sunrise.map { $0 < last ? x($0) : w } ?? w
-                        Rectangle()
-                            .fill(Color.hex(0x5E5CE6, opacity: 0.22))
-                            .frame(width: max(0, endX - x(sunset)), height: h)
-                            .offset(x: x(sunset))
-                        Rectangle()
-                            .fill(.white.opacity(0.5))
-                            .frame(width: 1, height: h)
-                            .offset(x: x(sunset))
-                    }
-                    Path { p in
-                        for (i, hour) in hours.enumerated() {
-                            let pt = CGPoint(x: x(hour.date), y: y(hour.temp))
-                            if i == 0 { p.move(to: pt) } else { p.addLine(to: pt) }
+                    curve.stroke(Color.hex(0xFFD60A), style: style)
+                        .mask {
+                            HStack(spacing: 0) {
+                                Color.white.frame(width: nightStart)
+                                Color.clear.frame(width: max(0, nightEnd - nightStart))
+                                Color.white
+                            }
                         }
+                        .widgetAccentable()
+                    curve.stroke(Color.white.opacity(0.6), style: style)
+                        .mask {
+                            HStack(spacing: 0) {
+                                Color.clear.frame(width: nightStart)
+                                Color.white.frame(width: max(0, nightEnd - nightStart))
+                                Color.clear
+                            }
+                        }
+                    if sunset > first && sunset < last {
+                        Image(systemName: "sunset.fill")
+                            .font(.system(size: 9))
+                            .foregroundStyle(Color.hex(0xFF9F0A))
+                            .offset(x: min(w - 12, max(0, nightStart - 6)), y: h - 12)
                     }
-                    .stroke(Color.hex(0xFFD60A), style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
-                    .widgetAccentable()
                     if let top = hours.max(by: { $0.temp < $1.temp }) {
                         Text("\(Int(top.temp.rounded()))°")
                             .font(.system(size: 10, weight: .semibold))
