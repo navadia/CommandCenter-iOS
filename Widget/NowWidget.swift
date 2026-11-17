@@ -201,8 +201,22 @@ private struct NowFaceView: View {
                 ItemBlock(entry: entry)
             }
             Spacer(minLength: 0)
+            if let alert {
+                NowLook.label(alert, NowLook.amber)
+            }
             DayBar(date: entry.date, events: entry.events)
         }
+    }
+
+    /// The big clock sits in the event spot when there's no event coming,
+    /// so the time only goes in the top line when an event is shown.
+    private var bigClockShown: Bool {
+        entry.calendarAllowed && !entry.events.contains { $0.end > entry.date }
+    }
+
+    private var dateLine: String {
+        let date = entry.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+        return bigClockShown ? date : "\(date) · \(entry.date.formatted(date: .omitted, time: .shortened))"
     }
 
     private var alert: String? {
@@ -214,8 +228,7 @@ private struct NowFaceView: View {
     private var topLine: some View {
         HStack(spacing: 6) {
             Button(intent: ShowNowFaceIntent(.world)) {
-                NowLook.label(alert ?? entry.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()),
-                              alert == nil ? NowLook.secondary : NowLook.amber)
+                NowLook.label(dateLine)
                     .frame(maxHeight: .infinity)
                     .contentShape(.rect)
             }
@@ -273,11 +286,16 @@ private struct EventBlock: View {
                         .widgetAccentable()
                 }
             } else {
-                VStack(alignment: .leading, spacing: 2) {
-                    NowLook.label("Calendar")
-                    Text("Nothing more today")
-                        .font(.system(size: 15, weight: .semibold))
-                    Text("Free").font(NowLook.big(30)).widgetAccentable()
+                VStack(alignment: .leading, spacing: 0) {
+                    NowLook.label("No more events today")
+                    HStack(alignment: .firstTextBaseline, spacing: 3) {
+                        Text(NowLook.time(now)).font(NowLook.big(40)).widgetAccentable()
+                        Text(Calendar.current.component(.hour, from: now) < 12 ? "AM" : "PM")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(NowLook.secondary)
+                    }
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                 }
             }
         }
@@ -337,9 +355,10 @@ private struct ItemBlock: View {
                 HStack(spacing: 8) {
                     Link(destination: URL(string: "commandcenter://item/\(item.id)")!) {
                         VStack(alignment: .leading, spacing: 1) {
-                            Text(item.amountText.map { "\(item.sender) · \($0)" } ?? item.sender)
+                            Text(item.sender)
                                 .font(.system(size: 15, weight: .semibold))
                                 .lineLimit(1)
+                                .minimumScaleFactor(0.8)
                             Text(subtitle(item))
                                 .font(.system(size: 13))
                                 .foregroundStyle(NowLook.secondary)
@@ -382,7 +401,8 @@ private struct ItemBlock: View {
 
     private func subtitle(_ item: Item) -> String {
         let more = entry.board.openCount - 1
-        return more > 0 ? "+\(more) more open" : item.subject
+        let rest = more > 0 ? "+\(more) more" : item.subject
+        return item.amountText.map { "\($0) · \(rest)" } ?? (more > 0 ? "+\(more) more open" : item.subject)
     }
 }
 
