@@ -50,7 +50,8 @@ struct NowProvider: AppIntentTimelineProvider {
             SharedStore.saveSnapshot(fresh)
             items = fresh
         }
-        let board = Board(items, snoozed: snoozed)
+        let done = SharedStore.recentlyDone
+        let board = Board(items.filter { !done.contains($0.id) }, snoozed: snoozed)
         let weather = await WeatherStore.load(allowNetwork: !justFlipped)
         let events = CalendarFeed.events()
         let cities = WorldClockStore.cities

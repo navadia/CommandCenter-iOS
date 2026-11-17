@@ -18,6 +18,7 @@ struct MarkDoneIntent: AppIntent {
 
     func perform() async throws -> some IntentResult {
         // Remove it locally first so the widget updates even if Notion is slow.
+        SharedStore.markRecentlyDone(itemID)
         SharedStore.removeFromSnapshot(itemID)
         if let token = TokenStore.load() {
             try await NotionClient(token: token).markDone(itemID)

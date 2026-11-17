@@ -72,6 +72,23 @@ enum SharedStore {
     static func removeFromSnapshot(_ id: String) {
         saveSnapshot(snapshot.filter { $0.id != id })
     }
+
+    // MARK: - Just marked done (so a widget reload can't bring an item back)
+
+    /// Items checked off in the last few minutes. Notion's query can lag a
+    /// moment behind an update, so the reload right after a Done tap could
+    /// still list the item; widgets hide these until Notion catches up.
+    static var recentlyDone: Set<String> {
+        let all = defaults.dictionary(forKey: "recentlyDone") as? [String: Date] ?? [:]
+        return Set(all.filter { $0.value > Date.now.addingTimeInterval(-180) }.keys)
+    }
+
+    static func markRecentlyDone(_ id: String) {
+        var all = (defaults.dictionary(forKey: "recentlyDone") as? [String: Date] ?? [:])
+            .filter { $0.value > Date.now.addingTimeInterval(-180) }
+        all[id] = .now
+        defaults.set(all, forKey: "recentlyDone")
+    }
 }
 
 /// A secret in the Keychain, shared with the widget through the App Group

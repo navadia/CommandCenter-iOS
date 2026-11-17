@@ -48,7 +48,8 @@ struct CCProvider: AppIntentTimelineProvider {
             return CCEntry(date: .now, board: Board(SharedStore.snapshot, snoozed: snoozed), isStale: false, hasToken: false)
         }
         do {
-            let items = try await NotionClient(token: token).openItems()
+            let done = SharedStore.recentlyDone
+            let items = try await NotionClient(token: token).openItems().filter { !done.contains($0.id) }
             SharedStore.saveSnapshot(items)
             let board = Board(items, snoozed: snoozed)
             // Icons for the rows the widget can show; letters if this is slow.
