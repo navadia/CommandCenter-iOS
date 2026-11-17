@@ -147,11 +147,19 @@ struct NowWidgetView: View {
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                switch entry.face {
-                case .now: NowFaceView(entry: entry)
-                case .weather: WeatherFaceView(entry: entry)
-                case .world: WorldFaceView(entry: entry)
+                // Faces slide like pages: Weather and World Clock come in from
+                // the right and push Now out to the left; Now slides back in.
+                ZStack {
+                    switch entry.face {
+                    case .now: NowFaceView(entry: entry)
+                    case .weather: WeatherFaceView(entry: entry)
+                    case .world: WorldFaceView(entry: entry)
+                    }
                 }
+                .id(entry.face)
+                .transition(entry.face == .now
+                            ? .asymmetric(insertion: .push(from: .leading), removal: .push(from: .trailing))
+                            : .asymmetric(insertion: .push(from: .trailing), removal: .push(from: .leading)))
             }
         }
         .foregroundStyle(.white)
