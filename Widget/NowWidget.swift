@@ -263,30 +263,9 @@ private struct EventBlock: View {
         let now = entry.date
         let current = entry.events.filter { $0.start <= now && $0.end > now }.min { $0.end < $1.end }
         let next = entry.events.first { $0.start > now }
-        Link(destination: calendarURL(current?.start ?? next?.start ?? now)) {
-            if !entry.calendarAllowed {
-                VStack(alignment: .leading, spacing: 3) {
-                    NowLook.label("Calendar", NowLook.orange)
-                    Text("Open Command Center › Settings › Now Widget to allow Calendar")
-                        .font(.system(size: 12))
-                        .foregroundStyle(NowLook.secondary)
-                        .lineLimit(4)
-                }
-            } else if let current {
-                inProgress(current, now: now)
-            } else if let next {
-                VStack(alignment: .leading, spacing: 2) {
-                    NowLook.label(dayLabel(next.start, from: now), NowLook.orange)
-                    Text("\(next.title) · \(NowLook.time(next.start))")
-                        .font(.system(size: 15, weight: .semibold))
-                        .lineLimit(1)
-                    Text(NowLook.countdown(to: next.start, from: now))
-                        .font(NowLook.big(30))
-                        .minimumScaleFactor(0.6)
-                        .lineLimit(1)
-                        .widgetAccentable()
-                }
-            } else {
+        if entry.calendarAllowed && current == nil && next == nil {
+            // Nothing on the calendar: the big clock. Tapping it opens World Clock.
+            Button(intent: ShowNowFaceIntent(.world)) {
                 VStack(alignment: .leading, spacing: 0) {
                     NowLook.label("No events left")
                     HStack(alignment: .firstTextBaseline, spacing: 3) {
@@ -297,6 +276,36 @@ private struct EventBlock: View {
                     }
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Show world clock")
+        } else {
+            Link(destination: calendarURL(current?.start ?? next?.start ?? now)) {
+                if !entry.calendarAllowed {
+                    VStack(alignment: .leading, spacing: 3) {
+                        NowLook.label("Calendar", NowLook.orange)
+                        Text("Open Command Center › Settings › Now Widget to allow Calendar")
+                            .font(.system(size: 12))
+                            .foregroundStyle(NowLook.secondary)
+                            .lineLimit(4)
+                    }
+                } else if let current {
+                    inProgress(current, now: now)
+                } else if let next {
+                    VStack(alignment: .leading, spacing: 2) {
+                        NowLook.label(dayLabel(next.start, from: now), NowLook.orange)
+                        Text("\(next.title) · \(NowLook.time(next.start))")
+                            .font(.system(size: 15, weight: .semibold))
+                            .lineLimit(1)
+                        Text(NowLook.countdown(to: next.start, from: now))
+                            .font(NowLook.big(30))
+                            .minimumScaleFactor(0.6)
+                            .lineLimit(1)
+                            .widgetAccentable()
+                    }
                 }
             }
         }
