@@ -165,7 +165,6 @@ struct NowWidgetView: View {
 struct NowBackgroundView: View {
     let date: Date
     let settingUp: Bool
-    @AppStorage(GlassPreference.key, store: SharedStore.defaults) private var frost = GlassPreference.standard
 
     var body: some View {
         if settingUp {
@@ -176,12 +175,14 @@ struct NowBackgroundView: View {
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFill()
-                    // The app's Glass setting: a touch darker when it's set more solid.
-                    Color.black.opacity(0.06 + 0.24 * frost)
+                    // Shade from Settings › Now Widget; 0 = no edge at all.
+                    Color.black.opacity(NowBackground.shade)
                 } else {
                     Color(white: 0.12)
                 }
-                RadialGradient(colors: [NowLook.tint(at: date), .clear], center: .topLeading, startRadius: 0, endRadius: 300)
+                if NowBackground.showsTint || NowBackground.image == nil {
+                    RadialGradient(colors: [NowLook.tint(at: date), .clear], center: .topLeading, startRadius: 0, endRadius: 300)
+                }
             }
         }
     }
@@ -287,7 +288,7 @@ private struct EventBlock: View {
                 }
             } else {
                 VStack(alignment: .leading, spacing: 0) {
-                    NowLook.label("No more events today")
+                    NowLook.label("No events left")
                     HStack(alignment: .firstTextBaseline, spacing: 3) {
                         Text(NowLook.time(now)).font(NowLook.big(40)).widgetAccentable()
                         Text(Calendar.current.component(.hour, from: now) < 12 ? "AM" : "PM")

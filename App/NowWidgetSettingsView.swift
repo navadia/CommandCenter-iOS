@@ -18,6 +18,8 @@ struct NowWidgetSettingsView: View {
     @State private var picks: [PhotosPickerItem] = []
     @State private var backgroundError: String?
     @State private var working = false
+    @State private var shade = NowBackground.shade
+    @State private var tint = NowBackground.showsTint
 
     var body: some View {
         Form {
@@ -197,12 +199,32 @@ struct NowWidgetSettingsView: View {
             if let backgroundError {
                 Text(backgroundError).font(.footnote).foregroundStyle(.red)
             }
+            if hasBackground {
+                VStack(alignment: .leading, spacing: 6) {
+                    Slider(value: $shade, in: 0...0.5) {
+                        Text("Shade")
+                    } minimumValueLabel: {
+                        Text("Clear").font(.caption)
+                    } maximumValueLabel: {
+                        Text("Darker").font(.caption)
+                    } onEditingChanged: { editing in
+                        guard !editing else { return }
+                        NowBackground.shade = shade
+                        WidgetCenter.shared.reloadTimelines(ofKind: "Now")
+                    }
+                }
+                Toggle("Time-of-Day Tint", isOn: $tint)
+                    .onChange(of: tint) { _, on in
+                        NowBackground.showsTint = on
+                        WidgetCenter.shared.reloadTimelines(ofKind: "Now")
+                    }
+            }
         } header: {
             Text("Background")
         } footer: {
             Text(settingUp
                  ? "1. Go to the home screen. The Now widget turns pink; take a screenshot of that page.\n2. Long-press an empty spot, swipe left to an empty page, take a screenshot, then press Done.\n3. Come back here and pick both screenshots."
-                 : "Shows your own wallpaper behind the widget so it looks see-through, like the rest of your home screen. Set it up again if you change your wallpaper or move the widget. If your home screen is set to Clear or Tinted, iPhone draws its own glass instead.")
+                 : "Shows your own wallpaper behind the widget so it looks see-through, like the rest of your home screen. Set it up again if you change your wallpaper or move the widget. Shade at Clear leaves no edge; slide it up if text is hard to read on a light wallpaper. If your home screen is set to Clear or Tinted, iPhone draws its own glass instead.")
         }
     }
 

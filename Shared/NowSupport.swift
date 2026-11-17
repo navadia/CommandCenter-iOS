@@ -368,6 +368,18 @@ enum NowBackground {
         return FileManager.default.fileExists(atPath: url.path)
     }
 
+    /// How much darker than the wallpaper the widget is (0 = invisible edges, up to 0.5).
+    static var shade: Double {
+        get { SharedStore.defaults.double(forKey: "nowShade") }
+        set { SharedStore.defaults.set(min(0.5, max(0, newValue)), forKey: "nowShade") }
+    }
+
+    /// The warm/cool/indigo time-of-day wash over the wallpaper. Off by default.
+    static var showsTint: Bool {
+        get { SharedStore.defaults.bool(forKey: "nowTint") }
+        set { SharedStore.defaults.set(newValue, forKey: "nowTint") }
+    }
+
     static var isSettingUp: Bool {
         get { SharedStore.defaults.bool(forKey: setupKey) }
         set { SharedStore.defaults.set(newValue, forKey: setupKey) }
