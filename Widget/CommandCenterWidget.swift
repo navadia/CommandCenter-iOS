@@ -6,6 +6,7 @@ import WidgetKit
 struct CommandCenterWidgets: WidgetBundle {
     var body: some Widget {
         CommandCenterWidget()
+        NowWidget()
     }
 }
 

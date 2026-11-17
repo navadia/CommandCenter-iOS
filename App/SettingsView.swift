@@ -101,6 +101,16 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    NavigationLink {
+                        NowWidgetSettingsView()
+                    } label: {
+                        Label("Now Widget", systemImage: "rectangle.inset.filled")
+                    }
+                } footer: {
+                    Text("Calendar, weather location, world clock cities and the see-through background for the Now widget.")
+                }
+
+                Section {
                     glassPreview
                     VStack(alignment: .leading, spacing: 6) {
                         Slider(value: $frost, in: 0...1) {
