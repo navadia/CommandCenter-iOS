@@ -305,7 +305,7 @@ enum NowFaceStore {
     private static let faceKey = "nowFace"
     private static let untilKey = "nowFaceUntil"
     /// How long Weather or World Clock stays up before the widget goes back to Now.
-    static let holdMinutes = 15
+    static let holdMinutes = 2
 
     static func show(_ face: NowFace) {
         SharedStore.defaults.set(face.rawValue, forKey: faceKey)

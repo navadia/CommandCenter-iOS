@@ -5,7 +5,7 @@ import WidgetKit
 // The "Now" widget: a wide widget for the top of the home screen.
 // Now face: next calendar event, the top Command Center item with Done,
 // weather on top, the day along the bottom. Tap the weather for the
-// Weather face, the date for World Clock; both flip back after 15 minutes.
+// Weather face, the date for World Clock; both flip back after 2 minutes.
 
 struct NowConfig: WidgetConfigurationIntent {
     static let title: LocalizedStringResource = "Now"
