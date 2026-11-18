@@ -62,12 +62,12 @@ struct DoneView: View {
         HStack(spacing: 12) {
             SenderAvatar(item: item, size: 38)
             VStack(alignment: .leading, spacing: 2) {
-                Text(item.sender).font(.body.weight(.semibold)).lineLimit(1)
+                Text(item.sender).font(.body.weight(.semibold)).lineLimit(2)
                 if !item.subject.isEmpty {
                     Text(item.subject).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
                 }
                 if item.closedByItself {
-                    Label(item.noteText, systemImage: "sparkles")
+                    Text("Closed by itself · \(item.noteText)")
                         .font(.footnote)
                         .foregroundStyle(.green)
                         .lineLimit(2)
