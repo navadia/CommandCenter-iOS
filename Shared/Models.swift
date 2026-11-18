@@ -16,6 +16,7 @@ struct Item: Identifiable, Codable, Hashable, Sendable {
     var created: String? = nil    // Notion created_time (ISO 8601)
     var source: String? = nil     // parser's "Sender name | destination"
     var note: String? = nil       // parser's Note: "Closed by itself: …" or "Check: …"
+    var edited: String? = nil     // Notion last_edited_time (ISO 8601): when it was marked done
 
     /// A payment / cancellation email came in but the match wasn't certain.
     var needsCheck: Bool { note?.hasPrefix("Check:") == true }

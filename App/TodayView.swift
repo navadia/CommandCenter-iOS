@@ -11,6 +11,7 @@ struct TodayView: View {
     @State private var showFocus = false
     @State private var showFYI = false
     @State private var showReceipts = false
+    @State private var showDone = false
     @State private var selecting = false
     @State private var selection = Set<String>()
     @State private var capture = CaptureCenter.shared
@@ -44,6 +45,7 @@ struct TodayView: View {
             .navigationDestination(item: $openVenture) { VentureView(venture: $0) }
             .navigationDestination(isPresented: $showFYI) { FYIView() }
             .navigationDestination(isPresented: $showReceipts) { ReceiptsView() }
+            .navigationDestination(isPresented: $showDone) { DoneView() }
             .refreshable { await store.refresh() }
             .sheet(isPresented: $showSettings) { SettingsView() }
             .sheet(item: Bindable(capture).request) { AddTaskSheet(request: $0) }
@@ -62,6 +64,7 @@ struct TodayView: View {
                 if let venture = DemoData.argument(after: "-demoVenture") { openVenture = venture }
                 if ProcessInfo.processInfo.arguments.contains("-demoFYI") { showFYI = true }
                 if ProcessInfo.processInfo.arguments.contains("-demoReceipts") { showReceipts = true }
+                if ProcessInfo.processInfo.arguments.contains("-demoDone") { showDone = true }
                 if let id = DemoData.argument(after: "-demoEdit"), let item = store.items.first(where: { $0.id == id }) {
                     edit(item)
                 }
@@ -230,6 +233,9 @@ struct TodayView: View {
             Divider().padding(.leading, 50)
             moreRow(icon: "doc.text.fill", title: "Receipts",
                     detail: "Invoices, statements, payments") { showReceipts = true }
+            Divider().padding(.leading, 50)
+            moreRow(icon: "checkmark.circle.fill", title: "Done",
+                    detail: "Marked done this week") { showDone = true }
         }
         .card(radius: 26)
         .padding(.horizontal, 16)

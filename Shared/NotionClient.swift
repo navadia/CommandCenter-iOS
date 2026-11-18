@@ -268,6 +268,29 @@ struct NotionClient: Sendable {
         return (json["results"] as? [[String: Any]] ?? []).compactMap(Self.item(from:))
     }
 
+    /// Everything marked done in the last `days` days, by you or by itself,
+    /// most recent first.
+    func recentlyDone(days: Int = 7) async throws -> [Item] {
+        let since = ISO8601DateFormatter().string(from: Date.now.addingTimeInterval(-Double(days) * 86_400))
+        var list: [Item] = []
+        var cursor: String?
+        repeat {
+            var body: [String: Any] = [
+                "filter": ["and": [
+                    ["property": "Status", "select": ["equals": "done"]],
+                    ["timestamp": "last_edited_time", "last_edited_time": ["on_or_after": since]],
+                ]],
+                "sorts": [["timestamp": "last_edited_time", "direction": "descending"]],
+                "page_size": 100,
+            ]
+            if let cursor { body["start_cursor"] = cursor }
+            let json = try await send(request("databases/\(Self.databaseID)/query", method: "POST", body: body))
+            list += (json["results"] as? [[String: Any]] ?? []).compactMap(Self.item(from:))
+            cursor = (json["has_more"] as? Bool == true) ? json["next_cursor"] as? String : nil
+        } while cursor != nil && list.count < 300
+        return list.filter { !$0.isInternal && !$0.isPower }
+    }
+
     /// Undo a close: open again, and forget the note.
     func reopen(_ id: String) async throws {
         let body: [String: Any] = ["properties": [
@@ -311,7 +334,8 @@ struct NotionClient: Sendable {
             domain: domain,
             created: page["created_time"] as? String,
             source: source.isEmpty ? nil : source,
-            note: note.isEmpty ? nil : note
+            note: note.isEmpty ? nil : note,
+            edited: page["last_edited_time"] as? String
         )
     }
 }

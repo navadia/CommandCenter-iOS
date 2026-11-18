@@ -66,6 +66,7 @@ jobs:
           shot fyi-light light -demoFYI
           shot receipts-light light -demoReceipts
           shot receipts-dark dark -demoReceipts
+          shot done-light light -demoDone
           shot categories-light light -demoSettings -demoCategory none
           shot category-light light -demoSettings -demoCategory 7-Eleven
           shot add-light light -demoAdd "McLane invoice #4471 for \$1,284 is due Wednesday. Pay it through the vendor portal."

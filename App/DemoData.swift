@@ -95,6 +95,24 @@ enum DemoData {
         ]
     }
 
+    static var recentlyDone: [Item] {
+        let ago = { (hours: Double) in ISO8601DateFormatter().string(from: Date.now.addingTimeInterval(-hours * 3600)) }
+        return [
+            Item(id: "x1", title: "Spectrum: Your internet bill is ready", type: "money", venture: "Shared/Household",
+                 amount: 70.37, due: nil, trial: false, link: nil, domain: "spectrum.net", edited: ago(1)),
+            Item(id: "x2", title: "AT&T: Your wireless bill is ready", type: "money", venture: "Family/General",
+                 amount: 86, due: nil, trial: false, link: nil, domain: "att.com",
+                 note: "Closed by itself: payment received email from AT&T, Nov 6 ($86.00).", edited: ago(3)),
+            Item(id: "x3", title: "Call the plumber about the kitchen sink", type: "todo", venture: "Shared/Household",
+                 amount: nil, due: nil, trial: false, link: nil, edited: ago(26)),
+            Item(id: "x4", title: "Executive Inn: Reservation confirmed", type: "travel", venture: "Travel",
+                 amount: nil, due: nil, trial: false, link: nil,
+                 note: "Closed by itself: cancelled email from Executive Inn, Nov 5.", edited: ago(50)),
+            Item(id: "x5", title: "Vercel: Deployment failed on main", type: "todo", venture: "Vishramo",
+                 amount: nil, due: nil, trial: false, link: nil, domain: "vercel.com", edited: ago(75)),
+        ]
+    }
+
     static var autoClosed: [Item] {
         [
             Item(id: "c1", title: "AT&T: Your wireless bill is ready", type: "money", venture: "Family/General",

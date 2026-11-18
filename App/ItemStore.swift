@@ -14,6 +14,9 @@ final class ItemStore {
     private(set) var snoozed = SnoozeStore.activeIDs()
     /// Closed by the email sorter in the last two days (shown with Undo).
     private(set) var autoClosed: [Item] = []
+    /// Marked done in the last week (the Done screen).
+    private(set) var recentlyDone: [Item] = []
+    private(set) var doneLoaded = false
     /// The FYI Mail table, newest first (the sorter keeps two weeks).
     private(set) var fyi: [FYIMail] = []
     private(set) var fyiLoaded = false
@@ -30,6 +33,8 @@ final class ItemStore {
             CategoryStore.save(DemoData.categories)
             items = DemoData.items
             autoClosed = DemoData.autoClosed
+            recentlyDone = DemoData.recentlyDone
+            doneLoaded = true
             fyi = DemoData.fyi
             fyiLoaded = true
             receipts = DemoData.receipts
@@ -139,6 +144,15 @@ final class ItemStore {
             SharedStore.saveSnapshot(items)
             errorMessage = "\(failed.count) item\(failed.count == 1 ? "" : "s") couldn't be marked done. Try again."
         }
+        // Show them on the Done screen straight away (Notion's list catches up later).
+        let now = ISO8601DateFormatter().string(from: .now)
+        let done = removed.filter { r in !failed.contains { $0.id == r.id } }.map { item -> Item in
+            var copy = item
+            copy.edited = now
+            return copy
+        }
+        recentlyDone.removeAll { d in done.contains { $0.id == d.id } }
+        recentlyDone.insert(contentsOf: done, at: 0)
     }
 
     private static let fyiDBKey = "fyiDB"
@@ -201,13 +215,30 @@ final class ItemStore {
         }
     }
 
-    /// Undo something the sorter closed by itself.
+    func loadDone() async {
+        if DemoData.isOn { return }
+        guard let token = TokenStore.load() else { return }
+        do {
+            recentlyDone = try await NotionClient(token: token).recentlyDone()
+        } catch {
+            // offline: keep what we showed last
+        }
+        doneLoaded = true
+    }
+
+    /// Undo a done item (yours or the sorter's): it goes back on the list.
     func reopen(_ item: Item) async {
-        if DemoData.isOn { autoClosed.removeAll { $0.id == item.id }; items.append(item); return }
+        if DemoData.isOn {
+            autoClosed.removeAll { $0.id == item.id }
+            recentlyDone.removeAll { $0.id == item.id }
+            items.append(item)
+            return
+        }
         guard let token = TokenStore.load() else { return }
         do {
             try await NotionClient(token: token).reopen(item.id)
             autoClosed.removeAll { $0.id == item.id }
+            recentlyDone.removeAll { $0.id == item.id }
             await refresh()
         } catch {
             errorMessage = "Couldn't reopen it. Try again."
